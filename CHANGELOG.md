@@ -73,5 +73,5 @@ Nothing pending. The entries below are what actually exists in this tree.
   and what you just typed are sent to a configured provider. Files, environment
   variables and history are never sent, and the CLI says so on screen.
 
-[Unreleased]: https://github.com/terminal-comedy-studio/terminal-comedy-studio/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/terminal-comedy-studio/terminal-comedy-studio/releases/tag/v0.1.0
+[Unreleased]: https://github.com/masihft/terminal-comedy-studio/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/masihft/terminal-comedy-studio/releases/tag/v0.1.0

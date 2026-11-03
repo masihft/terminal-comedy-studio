@@ -27,8 +27,8 @@ comedian = "terminal_comedian.main:main"
 comedian-preview = "terminal_comedian.preview:main"
 
 [project.urls]
-Homepage = "https://github.com/terminal-comedy-studio/terminal-comedy-studio"
-Issues = "https://github.com/terminal-comedy-studio/terminal-comedy-studio/issues"
+Homepage = "https://github.com/masihft/terminal-comedy-studio"
+Issues = "https://github.com/masihft/terminal-comedy-studio/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]

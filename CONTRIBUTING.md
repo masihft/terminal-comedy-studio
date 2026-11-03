@@ -9,7 +9,7 @@ ones that make the comedian funnier without making the codebase bigger.
 You need Python 3.10 or newer. Nothing else.
 
 ```bash
-git clone https://github.com/terminal-comedy-studio/terminal-comedy-studio.git
+git clone https://github.com/masihft/terminal-comedy-studio.git
 cd terminal-comedy-studio
 python3 -m venv .venv
 source .venv/bin/activate
@@ -113,10 +113,10 @@ for anything sensitive.
 
 ## Releasing
 
-The repository is published under the `terminal-comedy-studio` organisation in
-`pyproject.toml`, `README.md`, `SECURITY.md` and `CHANGELOG.md`. If you fork it
-to publish under your own account, change that URL in those four places before
-tagging.
+The repository is published as `masihft/terminal-comedy-studio`, and that URL
+appears in `pyproject.toml`, `README.md`, `SECURITY.md` and `CHANGELOG.md`. If
+the project moves to another account or an organisation, change it in those four
+places before tagging a release.
 
 A release is:
 

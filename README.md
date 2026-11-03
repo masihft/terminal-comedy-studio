@@ -61,7 +61,7 @@ after that.
 ## Installation
 
 ```bash
-git clone https://github.com/terminal-comedy-studio/terminal-comedy-studio
+git clone https://github.com/masihft/terminal-comedy-studio
 cd terminal-comedy-studio
 pip install -e .
 ```

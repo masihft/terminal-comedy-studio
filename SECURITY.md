@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Open a **private** security advisory on the repository's Security tab
-(https://github.com/terminal-comedy-studio/terminal-comedy-studio/security/advisories/new).
+(https://github.com/masihft/terminal-comedy-studio/security/advisories/new).
 Do not file a public issue for something exploitable.
 
 Please include: the version (`comedian --version`), your OS and terminal, and a
