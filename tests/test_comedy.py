@@ -233,18 +233,32 @@ def test_session_forgets_on_reset():
 # ---------------------------------------------------------------- audience
 
 
+class Rolls:
+    """A stand-in for random.Random with a fixed sequence, so the room is testable."""
+
+    def __init__(self, *values: float) -> None:
+        self.values = list(values)
+
+    def random(self) -> float:
+        return self.values.pop(0) if self.values else 0.99
+
+
 def test_audience_is_not_always_loud():
-    room = Audience()
-    reactions = [room.react("a line", emotion=Emotion.NEUTRAL, mode="chat") for _ in range(60)]
-    quiet = sum(1 for reaction in reactions if not reaction.loud)
-    assert quiet >= 20
+    room = Audience(rng=Rolls(*[0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6]))
+    reactions = [room.react("a line", emotion=Emotion.NEUTRAL, mode="chat") for _ in range(8)]
+    assert sum(1 for reaction in reactions if not reaction.loud) == 8
 
 
 def test_two_loud_moments_in_a_row_are_followed_by_an_awkward_beat():
-    room = Audience()
+    room = Audience(rng=Rolls(0.5))
     room.last_loud = True
     reaction = room.react("line", emotion=Emotion.NEUTRAL, mode="chat")
     assert reaction.key == "awkward"
+
+
+def test_a_quiet_room_can_still_be_surprised():
+    room = Audience(rng=Rolls(0.15))
+    assert room.react("line", emotion=Emotion.NEUTRAL, mode="chat").key == "surprise"
 
 
 def test_audience_keeps_score_for_the_prompt():

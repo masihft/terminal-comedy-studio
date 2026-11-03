@@ -51,7 +51,7 @@ Nothing pending. The entries below are what actually exists in this tree.
 - `.env` loading from the project directory, `$XDG_CONFIG_HOME` and
   `~/.terminal-comedy-studio`, with real environment variables always winning;
   `.env.example` ships placeholders only.
-- Test suite of 130 tests covering frames and geometry, animation validity,
+- Test suite of 131 tests covering frames and geometry, animation validity,
   provider abstraction and configuration, structured-output parsing, comedy
   routing, callbacks, audience, stage rendering across four terminal profiles,
   command dispatch and the HTTP transport against a throwaway local gateway. No
