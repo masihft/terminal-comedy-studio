@@ -24,7 +24,7 @@ from .ui.animation import StagePainter, animate
 from .ui.input import Command, help_lines, parse, unknown
 from .ui.input import COMMANDS
 from .ui.stage import banner, stage_lines
-from .ui.terminal import Capabilities, detect
+from .ui.terminal import Capabilities, detect, silent_terminal
 
 PROMPT = "\x1b[38;2;255;79;163m>\x1b[0m "
 PLAIN_PROMPT = "> "
@@ -82,14 +82,15 @@ class Show:
     def speak(self, performance: Performance, *, live: bool = True) -> None:
         mode = self.session.mode
         if live and self.caps.tty:
-            self.painter.show(self.render(performance.text, ANIMATIONS[performance.animation].frames[0], mode))
-            if performance.duration > 0.15:
-                animate(
-                    performance.animation,
-                    min(performance.duration, 4.0),
-                    lambda frame: self.painter.show(self.render(performance.text, frame, mode)),
-                    self.caps,
-                )
+            with silent_terminal():
+                self.painter.show(self.render(performance.text, ANIMATIONS[performance.animation].frames[0], mode))
+                if performance.duration > 0.15:
+                    animate(
+                        performance.animation,
+                        min(performance.duration, 4.0),
+                        lambda frame: self.painter.show(self.render(performance.text, frame, mode)),
+                        self.caps,
+                    )
         self.painter.commit(self.render(performance.text, ANIMATIONS[performance.animation].frames[-1], mode))
         reaction = self.session.audience.react(performance.text, emotion=performance.emotion, mode=mode)
         if reaction.text:
@@ -112,13 +113,14 @@ class Show:
             player.advance(step)
             self.painter.show(self.render(buffer["text"], player.frame_name, chosen))
 
-        performance = self.engine.perform(
-            text,
-            session=self.session,
-            mode=chosen,
-            provider=self.provider,
-            on_delta=on_delta if self.caps.tty else None,
-        )
+        with silent_terminal():
+            performance = self.engine.perform(
+                text,
+                session=self.session,
+                mode=chosen,
+                provider=self.provider,
+                on_delta=on_delta if self.caps.tty else None,
+            )
         if buffer["text"] and performance.text == buffer["text"]:
             self.painter.commit(self.render(performance.text, ANIMATIONS[performance.animation].frames[-1], chosen))
             reaction = self.session.audience.react(performance.text, emotion=performance.emotion, mode=chosen)

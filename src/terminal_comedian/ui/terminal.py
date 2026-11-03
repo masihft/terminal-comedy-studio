@@ -7,6 +7,7 @@ import re
 import shutil
 import sys
 import unicodedata
+from contextlib import contextmanager
 from dataclasses import dataclass
 
 MIN_WIDTH = 60
@@ -123,3 +124,37 @@ def wrap(text: str, width: int) -> list[str]:
             current = word
         lines.append(current)
     return lines or [""]
+
+
+@contextmanager
+def silent_terminal(stream=None):
+    """Stop the terminal echoing keystrokes while the stage owns the screen.
+
+    The tty driver echoes a typed-ahead character the moment it arrives, even
+    though the program has not read it yet. That extra row pushes the stage
+    down one line, and the next in-place repaint — which counts its own lines,
+    not the terminal's — leaves the previous box border behind. Without termios
+    (Windows, a pipe, a redirect) this is a no-op.
+    """
+    stream = sys.stdout if stream is None else stream
+    try:
+        import termios
+    except ImportError:
+        yield
+        return
+    try:
+        fd = stream.fileno()
+        saved = termios.tcgetattr(fd)
+        attrs = termios.tcgetattr(fd)
+        attrs[3] &= ~termios.ECHO
+        termios.tcsetattr(fd, termios.TCSADRAIN, attrs)
+    except (AttributeError, OSError, ValueError, termios.error):
+        yield
+        return
+    try:
+        yield
+    finally:
+        try:
+            termios.tcsetattr(fd, termios.TCSADRAIN, saved)
+        except (OSError, ValueError, termios.error):
+            pass

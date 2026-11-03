@@ -192,7 +192,7 @@ pytest
 ./scripts/demo.sh
 ```
 
-131 tests, none of which need an API key or a network. The transport tests start their own
+133 tests, none of which need an API key or a network. The transport tests start their own
 throwaway OpenAI-compatible gateway on localhost.
 
 ## Roadmap

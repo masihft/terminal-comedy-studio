@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 import pytest
 
 from terminal_comedian.ai.provider import AIProvider
@@ -12,7 +14,7 @@ from terminal_comedian.config.settings import Settings
 from terminal_comedian.memory.session import Session
 from terminal_comedian.ui.input import COMMANDS, help_lines, parse, unknown
 from terminal_comedian.ui.stage import stage_lines
-from terminal_comedian.ui.terminal import Capabilities, strip_ansi, text_width, wrap
+from terminal_comedian.ui.terminal import Capabilities, silent_terminal, strip_ansi, text_width, wrap
 from terminal_comedian.comedy.reactions import Audience
 
 PLAIN = Capabilities(width=100, height=40, tty=False, truecolor=False, unicode=True)
@@ -121,6 +123,35 @@ def test_control_sequences_in_a_reply_never_reach_the_screen():
 
 def test_wrapping_keeps_persian_zwnj():
     assert wrap("کار می‌کند", 40) == ["کار می‌کند"]
+
+
+def test_silent_terminal_is_a_noop_without_a_real_tty(tmp_path):
+    import io
+
+    with open(tmp_path / "out.txt", "w", encoding="utf-8") as redirected:
+        with silent_terminal(redirected):
+            pass
+        with silent_terminal(io.StringIO()):
+            pass
+
+
+@pytest.mark.skipif(not hasattr(os, "openpty"), reason="POSIX pseudo-terminals only")
+def test_silent_terminal_clears_echo_and_puts_it_back():
+    import termios
+
+    master, slave = os.openpty()
+    try:
+        stream = os.fdopen(slave, "w", closefd=False)
+        wanted = termios.tcgetattr(slave)
+        with silent_terminal(stream):
+            inside = termios.tcgetattr(slave)
+            assert not inside[3] & termios.ECHO
+        after = termios.tcgetattr(slave)
+        assert after[3] & termios.ECHO
+        assert after == wanted
+    finally:
+        os.close(master)
+        os.close(slave)
 
 
 def test_colour_only_rows_survive_a_dumb_terminal():
