@@ -8,6 +8,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `/connect` (alias `/login`) connects a model from the stage, with no file editing.
+  OpenRouter offers browser sign-in through its OAuth PKCE flow, plus a paste-the-code
+  path for SSH. OpenAI and Anthropic take a pasted API key, read without echo.
+  OmniRoute and local servers take a base URL. The comedian then lists the provider's
+  models to pick from, and, if you agree, saves the connection to an owner-only
+  `~/.config/terminal-comedy-studio/.env`.
+- `/model` lists or sets the model for the provider on stage; `/logout` removes the
+  saved key and goes offline.
 - `/save [file]` writes the whole set — every line, not just the prompt window —
   to a local markdown file. It refuses to overwrite an existing file.
 - Each comedian wears their own jacket — pink for Claw'd, purple for Sarkash,

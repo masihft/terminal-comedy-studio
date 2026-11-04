@@ -7,6 +7,7 @@ never before the comedian appears.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import time
 from pathlib import Path
@@ -18,7 +19,9 @@ from .character.personality import character_names, load_character
 from .character.states import ANIMATIONS, Player
 from .comedy.engine import ComedyEngine, Performance
 from .comedy.reactions import Audience
+from .config.credentials import save_values, user_env_path
 from .config.settings import Settings
+from .connect import Wizard
 from .memory.session import Session
 from .prompts import MODES, mode_help
 from .ui.animation import StagePainter, animate
@@ -78,7 +81,7 @@ class Show:
                 "only what you type here is sent to it. Nothing else. (/settings)"
             )
         else:
-            print("AI: none configured. The comedian performs offline material. (/provider)")
+            print("AI: none configured. The comedian performs offline material. (/connect)")
         print()
 
     def speak(self, performance: Performance, *, live: bool = True) -> None:
@@ -147,12 +150,13 @@ class Show:
         self.session.reset()
         return f"{self.comedian} takes the mic."
 
-    def set_provider(self, name: str) -> str:
-        if name in {"", "none", "offline"}:
-            self.provider = None
-            self.session.provider_label = "offline"
-            return "provider: offline (local material only)"
-        settings = Settings.load(environ={**self.settings.environ, "AI_PROVIDER": name})
+    def apply(self, values: dict[str, str | None]) -> str:
+        """Swap in new settings (None removes a key) and rebuild the provider."""
+        environ = {**self.settings.environ, **{k: v for k, v in values.items() if v is not None}}
+        for key, value in values.items():
+            if value is None:
+                environ.pop(key, None)
+        settings = Settings.load(environ=environ)
         try:
             provider = create_provider(settings)
         except ProviderNotConfigured as error:
@@ -162,10 +166,45 @@ class Show:
         self.engine.settings = settings
         self.session.provider_label = provider.id if provider else "offline"
         if provider is None:
-            return "provider: offline"
+            return "provider: offline (local material only)"
         if not provider.is_configured:
-            return f"{provider.label} needs: {provider.missing()}"
+            return f"{provider.label} needs: {provider.missing()} — try /connect {provider.id}"
         return f"{provider.label} at {provider.base_url}, model {provider.model or 'default'}."
+
+    def set_provider(self, name: str) -> str:
+        if name in {"", "none", "offline"}:
+            name = "offline"
+        return self.apply({"AI_PROVIDER": name})
+
+    def wizard(self) -> Wizard:
+        return Wizard(settings=self.settings)
+
+    def connect(self, argument: str) -> str:
+        values = self.wizard().connect(argument.lower())
+        return self.apply(values) if values else ""
+
+    def choose_model(self, argument: str) -> str:
+        if not self.provider:
+            return "no model on stage. /connect first."
+        values = self.wizard().model(self.provider, argument)
+        return self.apply(values) if values else ""
+
+    def logout(self) -> str:
+        if not self.provider:
+            return "already offline."
+        provider = self.provider
+        forget: dict[str, str | None] = {"AI_PROVIDER": None}
+        if provider.key_env:
+            forget[provider.key_env] = None
+        lines = []
+        path = user_env_path()
+        if path.is_file():
+            save_values(forget, path)
+            lines.append(f"forgot the {provider.label} key saved in {path}.")
+        lines.append(self.apply({**forget, "AI_PROVIDER": "offline"}))
+        if provider.key_env and provider.key_env in os.environ:
+            lines.append(f"note: {provider.key_env} is still set in your shell.")
+        return "\n".join(lines)
 
     def settings_lines(self) -> list[str]:
         rows = [
@@ -220,6 +259,19 @@ class Show:
             return True
         if name == "character":
             print(self.set_character(argument.lower()))
+            return True
+        if name == "connect":
+            result = self.connect(argument)
+            if result:
+                print(result)
+            return True
+        if name == "model":
+            result = self.choose_model(argument)
+            if result:
+                print(result)
+            return True
+        if name == "logout":
+            print(self.logout())
             return True
         if name == "provider":
             print(self.set_provider(argument.lower()))

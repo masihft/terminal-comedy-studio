@@ -7,6 +7,8 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .credentials import user_env_path
+
 _ENV_LINE = re.compile(r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$")
 
 
@@ -34,7 +36,7 @@ def parse_env_file(path: Path) -> dict[str, str]:
 def default_env_paths(start: Path | None = None) -> list[Path]:
     here = (start or Path.cwd()).resolve()
     paths = [here / ".env"]
-    paths.append(Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))) / "terminal-comedy-studio" / ".env")
+    paths.append(user_env_path())
     paths.append(Path.home() / ".terminal-comedy-studio" / ".env")
     return paths
 

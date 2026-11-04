@@ -32,6 +32,14 @@ report.
 - Credentials live in environment variables. `AIProvider.key_env` stores the
   *name* of the variable that holds a key, never the key itself, so no code
   path, test or log line can accidentally carry a token.
+- `/connect` is the one place a key is written: to the user's own
+  `~/.config/terminal-comedy-studio/.env`, created `0600`, outside the
+  repository, and only after the user answers yes. Keys are typed through
+  `getpass` (no echo) and are only ever shown masked (`…abcd`). `/logout`
+  removes them again.
+- OpenRouter browser sign-in uses OAuth with PKCE (S256) and a random `state`.
+  The callback listener binds `127.0.0.1` only, accepts one matching redirect,
+  ignores any other, and shuts down after the login or a timeout.
 - Tests require no credentials and no network. Provider behaviour is covered by
   fakes and by a throwaway localhost server started inside
   `tests/test_http_transport.py` with a valueless test token.

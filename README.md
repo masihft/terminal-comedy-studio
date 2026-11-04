@@ -11,7 +11,7 @@ $ comedian
 
 TERMINAL COMEDY STUDIO
 Claw'd is on stage. Type anything, or /help.
-AI: none configured. The comedian performs offline material. (/provider)
+AI: none configured. The comedian performs offline material. (/connect)
 
 ╭────────────────────────────────────────────────────────────────────────╮
 │                            TERMINAL COMEDY                             │
@@ -102,8 +102,41 @@ LANGUAGE=fa
 | `COMEDIAN_TIMEOUT` / `COMEDIAN_TEMPERATURE` / `COMEDIAN_MAX_TOKENS` | request tuning |
 | `NO_COLOR` | any value disables ANSI colour |
 
-Never commit `.env`. Keys are read by the **name** of the environment variable; no key value
-is stored, printed or written to disk by this project.
+Never commit `.env`. Keys are read by the **name** of the environment variable and are never
+printed. The only place this project writes a key is your own config file, and only when
+`/connect` asks and you say yes (see below).
+
+## Connecting a model from the stage
+
+No file editing needed. On stage, type:
+
+```text
+/connect
+```
+
+and pick a provider from the menu:
+
+- **OpenRouter** — sign in with your browser. The comedian opens openrouter.ai, you approve,
+  and the browser comes back to a one-shot listener on `127.0.0.1`. This is OpenRouter's
+  documented OAuth PKCE flow: no password or client secret passes through the comedian, and
+  usage is billed to your own OpenRouter account. Over SSH, choose "paste a code" instead:
+  open the link on any device and paste the code it shows. You can also paste a key.
+- **OpenAI / Anthropic** — paste an API key. It is read without echo. Press Enter on an
+  empty prompt and the comedian opens the provider's key page for you.
+- **OmniRoute / Local server** — type the base URL (and a key, if your server wants one).
+
+Next the comedian lists the provider's models. Pick one by number, type part of a name to
+search, or press Enter for the default. Last, it asks whether to remember the connection in
+`~/.config/terminal-comedy-studio/.env` (or `$XDG_CONFIG_HOME/terminal-comedy-studio/.env`),
+which it creates readable by you only. Say no and the connection lasts for this show only.
+
+| Command | What it does |
+| --- | --- |
+| `/connect [id]`, `/login` | the menu above; `/connect openrouter` jumps straight to one |
+| `/model [name]` | list and pick a model for the provider on stage, or set one directly |
+| `/logout` | remove the saved key for this provider and go offline |
+
+Variables set in your shell still win over the saved file. `/connect` tells you when one does.
 
 ## Providers
 
@@ -116,7 +149,7 @@ is stored, printed or written to disk by this project.
 | Local server | `LOCAL_API_KEY` (optional) | `LOCAL_BASE_URL` | llama.cpp, vLLM, LM Studio, anything with `/v1/chat/completions` |
 | offline | — | — | no network calls at all |
 
-Switch at any time with `/provider <id>`, or per run with `comedian --provider openrouter`.
+Switch at any time with `/connect` or `/provider <id>`, or per run with `comedian --provider openrouter`.
 
 ## Commands
 
@@ -132,6 +165,9 @@ Natural language is the main interface — type anything. Commands are the side 
 | `/random` | the comedian chooses what to perform |
 | `/mode [name]` | show or set the default mode |
 | `/character [name]` | who is holding the mic |
+| `/connect [id]`, `/login` | connect a model: browser sign-in or API key |
+| `/model [name]` | pick the model |
+| `/logout` | forget the saved key and go offline |
 | `/provider [id]` | show or switch the AI provider |
 | `/settings` | provider, model, language, and exactly what gets sent where |
 | `/save [file]` | write this set to a markdown file (never overwrites) |

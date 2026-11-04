@@ -185,6 +185,10 @@ class AIProvider(ABC):
             parts.append(self.model_env)
         return ", ".join(parts)
 
+    def list_models(self, timeout: float = 10.0) -> list[str]:
+        """Model ids the provider offers; empty when it cannot say."""
+        return []
+
     @abstractmethod
     def complete(
         self,

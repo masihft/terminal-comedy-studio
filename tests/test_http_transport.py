@@ -111,7 +111,7 @@ def test_authentication_failure_is_a_message_not_a_traceback(gateway):
     provider = OpenAIProvider(settings(AI_PROVIDER="openai", OPENAI_API_KEY="k", OPENAI_BASE_URL=gateway))
     with pytest.raises(ProviderUnavailable) as error:
         provider.complete([{"role": "user", "content": "joke"}])
-    assert "Check the API key" in str(error.value)
+    assert "/connect" in str(error.value)
 
 
 def test_a_dead_gateway_is_reported_as_unreachable():

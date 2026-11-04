@@ -46,10 +46,33 @@ def request_json(
         raise AIError(f"{url.split('//', 1)[-1]} returned something that is not JSON") from error
 
 
+def get_json(url: str, headers: dict[str, str], timeout: float) -> dict[str, Any]:
+    request = urllib.request.Request(url, headers={"user-agent": USER_AGENT, **headers}, method="GET")
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return json.loads(response.read().decode("utf-8", "replace") or "{}")
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode("utf-8", "replace")[:400] if error.fp else ""
+        raise _http_error(url, error, detail) from error
+    except urllib.error.URLError as error:
+        raise ProviderUnavailable(_describe(url, error)) from error
+    except json.JSONDecodeError as error:
+        raise AIError(f"{url.split('//', 1)[-1]} returned something that is not JSON") from error
+
+
+def model_ids(data: dict[str, Any]) -> list[str]:
+    """The ids from an OpenAI- or Anthropic-style model list, sorted."""
+    rows = data.get("data") if isinstance(data, dict) else None
+    if not isinstance(rows, list):
+        rows = data.get("models") if isinstance(data, dict) else None
+    ids = {str(row.get("id") or row.get("name") or "") for row in rows or [] if isinstance(row, dict)}
+    return sorted(i for i in ids if i)
+
+
 def _http_error(url: str, error: urllib.error.HTTPError, detail: str) -> AIError:
     host = url.split("//", 1)[-1]
     if error.code in (401, 403):
-        return ProviderUnavailable(f"{host} refused the key (HTTP {error.code}). Check the API key in .env.")
+        return ProviderUnavailable(f"{host} refused the key (HTTP {error.code}). Run /connect to set it again.")
     if error.code == 429:
         return ProviderUnavailable(f"{host} is rate limited (HTTP 429). Try again in a moment.")
     if error.code == 404:

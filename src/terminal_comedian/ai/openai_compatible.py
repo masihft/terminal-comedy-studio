@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .http import request_json, stream_text
+from .http import get_json, model_ids, request_json, stream_text
 from .provider import AIProvider, ProviderNotConfigured
 
 
@@ -20,6 +20,11 @@ class OpenAICompatibleProvider(AIProvider):
         if not self.api_key and self.needs_key:
             raise ProviderNotConfigured(f"{self.label}: set {self.key_env}.")
         return f"{self.base_url}/chat/completions"
+
+    def list_models(self, timeout: float = 10.0) -> list[str]:
+        if not self.base_url:
+            raise ProviderNotConfigured(f"{self.label}: set {self.base_url_env}.")
+        return model_ids(get_json(f"{self.base_url}/models", self._headers(), timeout))
 
     def _payload(self, messages: list[dict[str, str]], temperature: float, max_tokens: int) -> dict[str, Any]:
         return {

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .http import request_json, stream_text
+from .http import get_json, model_ids, request_json, stream_text
 from .provider import AIProvider, ProviderNotConfigured, register
 
 
@@ -26,6 +26,9 @@ class AnthropicProvider(AIProvider):
             "x-api-key": self.api_key,
             "anthropic-version": "2023-06-01",
         }
+
+    def list_models(self, timeout: float = 10.0) -> list[str]:
+        return model_ids(get_json(f"{self.base_url}/v1/models?limit=100", self._headers(), timeout))
 
     def _split(self, messages: list[dict[str, str]]) -> tuple[str, list[dict[str, str]]]:
         system = "\n\n".join(m["content"] for m in messages if m.get("role") == "system")
