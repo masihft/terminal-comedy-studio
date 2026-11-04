@@ -26,10 +26,12 @@ class Session:
     callbacks: CallbackEngine = field(default_factory=CallbackEngine)
     bits_told: int = 0
     provider_label: str = "offline"
+    script: list = field(default_factory=list)  # the whole set, for /save; turns is only the prompt window
 
     def record(self, role: str, content: str) -> None:
         if content.strip():
             self.turns.append({"role": role, "content": content.strip()})
+            self.script.append((role, content.strip()))
 
     def history(self) -> list[dict[str, str]]:
         return [dict(turn) for turn in self.turns]
@@ -44,8 +46,17 @@ class Session:
 
     def reset(self) -> None:
         self.turns.clear()
+        self.script.clear()
         self.callbacks.reset()
         self.bits_told = 0
+
+    def as_markdown(self, comedian: str) -> str:
+        """The set as a readable script: the comedian's lines and what the audience said."""
+        lines = [f"# {comedian} — live from your terminal", ""]
+        for role, content in self.script:
+            speaker = comedian if role == "assistant" else "You"
+            lines += [f"**{speaker}:** {content}", ""]
+        return "\n".join(lines)
 
     def context_block(self) -> str:
         """The stage notes injected into the prompt: room, callbacks, running order."""

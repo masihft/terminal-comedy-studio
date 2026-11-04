@@ -6,6 +6,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `/save [file]` writes the whole set — every line, not just the prompt window —
+  to a local markdown file. It refuses to overwrite an existing file.
+- GitHub Actions workflow running the tests on Linux, macOS and Windows,
+  Python 3.10 and 3.13.
+
 ### Fixed
 
 - The stage stops the terminal echoing keystrokes while it owns the screen. Typing

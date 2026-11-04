@@ -294,3 +294,27 @@ def test_version_exits_cleanly():
     with pytest.raises(SystemExit) as stop:
         make_show(["--version"])
     assert stop.value.code == 0
+
+
+def test_save_writes_the_whole_set_and_never_overwrites(tmp_path):
+    show = build_show()
+    target = tmp_path / "set.md"
+    assert "nothing to save" in show.save_set(str(target))
+    show.perform("my docker build is slow", mode="chat")
+    assert show.run_command(*parse(f"/save {target}")) is True
+    assert target.exists()
+    text = target.read_text(encoding="utf-8")
+    assert "**You:** my docker build is slow" in text
+    assert f"**{show.comedian}:**" in text
+    assert "already exists" in show.save_set(str(target))
+    assert target.read_text(encoding="utf-8") == text
+
+
+def test_save_keeps_more_than_the_prompt_window():
+    room = Session()
+    for index in range(30):
+        room.record("user", f"line {index}")
+    assert len(room) < 30
+    assert "line 0" in room.as_markdown("Comedian")
+    room.reset()
+    assert room.script == []

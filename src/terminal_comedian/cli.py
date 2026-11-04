@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import sys
 import time
+from pathlib import Path
 from dataclasses import dataclass, field
 
 from . import __version__
@@ -186,6 +187,19 @@ class Show:
                 rows.append(f"missing configuration: {missing}")
         return rows
 
+    def save_set(self, argument: str) -> str:
+        if not self.session.script:
+            return "nothing to save yet. say something first."
+        path = Path(argument or time.strftime("set-%Y%m%d-%H%M%S.md")).expanduser()
+        try:
+            with path.open("x", encoding="utf-8") as handle:  # "x": never overwrite a file
+                handle.write(self.session.as_markdown(self.comedian))
+        except FileExistsError:
+            return f"{path} already exists. pick another name."
+        except OSError as error:
+            return f"could not save: {error.strerror or error}"
+        return f"saved the set to {path}"
+
     def run_command(self, command: Command, argument: str) -> bool:
         name = command.name
         if name == "help":
@@ -211,6 +225,9 @@ class Show:
             return True
         if name == "settings":
             print("\n".join(self.settings_lines()))
+            return True
+        if name == "save":
+            print(self.save_set(argument))
             return True
         if name == "reset":
             self.session.reset()

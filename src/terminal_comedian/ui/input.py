@@ -31,6 +31,7 @@ COMMANDS: tuple[Command, ...] = (
     Command("character", "show or switch the comedian on stage", needs_argument=False),
     Command("provider", "show or switch the AI provider", needs_argument=False),
     Command("settings", "provider, language and what gets sent where"),
+    Command("save", "write this set to a markdown file — /save my-set.md"),
     Command("reset", "forget this session and start a fresh show"),
     Command("exit", "leave the stage", ("quit",)),
 )

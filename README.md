@@ -130,6 +130,7 @@ Natural language is the main interface — type anything. Commands are the side 
 | `/character [name]` | who is holding the mic |
 | `/provider [id]` | show or switch the AI provider |
 | `/settings` | provider, model, language, and exactly what gets sent where |
+| `/save [file]` | write this set to a markdown file (never overwrites) |
 | `/reset` | forget the session |
 | `/exit`, `/quit` | leave the stage |
 
@@ -199,7 +200,7 @@ throwaway OpenAI-compatible gateway on localhost.
 
 - **v0.1 (this)** — character, animations, stage CLI, offline comedy, five providers,
   callbacks, audience, Persian and English.
-- **v0.2** — more frames and poses, better timing, more characters, `/save` a set.
+- **v0.2** — more frames and poses, better timing, more characters. (`/save` a set has landed.)
 - **v0.3** — persistent memory between shows, richer callback selection.
 - **v0.4** — optional Claude Code / coding-event reactions, OmniRoute improvements.
 - **v0.5** — voice and lip-sync, Kitty / iTerm2 / Sixel renderers.

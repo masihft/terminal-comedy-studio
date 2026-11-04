@@ -16,3 +16,5 @@ node_modules/
 
 # local reference material, not part of the package
 clawd refference/
+.claude-flow/
+.swarm/
