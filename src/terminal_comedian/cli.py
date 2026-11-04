@@ -22,6 +22,7 @@ from .comedy.reactions import Audience
 from .config.credentials import save_values, user_env_path
 from .config.settings import Settings
 from .connect import Wizard
+from .harness import Decision, Harness, Permissions, ToolCall, Workspace
 from .memory.session import Session
 from .prompts import MODES, mode_help
 from .ui.animation import StagePainter, animate
@@ -46,6 +47,7 @@ class Show:
     provider: AIProvider | None = None
     painter: StagePainter = field(init=False)
     exit_code: int = 0
+    _harness: Harness | None = field(default=None, init=False, repr=False)
 
     def __post_init__(self) -> None:
         self.painter = StagePainter(self.caps)
@@ -227,6 +229,31 @@ class Show:
                 rows.append(f"missing configuration: {missing}")
         return rows
 
+    def harness(self) -> Harness:
+        if self._harness is None:
+            self._harness = Harness(
+                engine=self.engine,
+                workspace=Workspace(Path.cwd()),
+                approve=_ask_on_the_line,
+                permissions=Permissions(mode=self.settings.get("COMEDIAN_LOOK", "ask").lower()),
+                notify=lambda kind, text: print(f"   ({text})"),
+            )
+        return self._harness
+
+    def look(self, argument: str) -> None:
+        harness = self.harness()
+        if self.provider is None:
+            performance = harness.look(self.session)
+        else:
+            performance = harness.run(
+                argument or "Look at my project folder and do a bit about it.",
+                session=self.session,
+                mode="roast",
+                provider=self.provider,
+            )
+        self.speak(performance)
+        self.session.note_exchange("/look", performance.text)
+
     def save_set(self, argument: str) -> str:
         if not self.session.script:
             return "nothing to save yet. say something first."
@@ -259,6 +286,15 @@ class Show:
             return True
         if name == "character":
             print(self.set_character(argument.lower()))
+            return True
+        if name == "look":
+            self.look(argument)
+            return True
+        if name == "tools":
+            choice = argument.lower()
+            if choice in {"ask", "allow", "off"}:
+                self.harness().permissions = Permissions(mode=choice)
+            print(f"folder access: {self.harness().permissions.mode} (/tools ask | allow | off)")
             return True
         if name == "connect":
             result = self.connect(argument)
@@ -325,6 +361,14 @@ class Show:
         return self.exit_code
 
 
+def _ask_on_the_line(call: ToolCall) -> Decision:
+    try:
+        answer = input(f"   the comedian wants to {call.description}. allow? [y]es / [a]lways / [N]o: ")
+    except (EOFError, KeyboardInterrupt):
+        return Decision.DENY
+    return {"y": Decision.ONCE, "yes": Decision.ONCE, "a": Decision.ALWAYS}.get(answer.strip().lower(), Decision.DENY)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="comedian",
@@ -339,6 +383,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--mode", metavar="NAME", help=f"default mode: {', '.join(MODES)}")
     parser.add_argument("--no-color", action="store_true", help="plain text, no ANSI")
     parser.add_argument("--plain", action="store_true", help="no colour and no Unicode blocks")
+    parser.add_argument("--classic", action="store_true", help="the line-by-line stage instead of the full-screen app")
+    parser.add_argument(
+        "--look",
+        choices=["ask", "allow", "off"],
+        help="may the comedian look at this folder? ask (default), allow, off",
+    )
     parser.add_argument(
         "bit",
         nargs="?",
@@ -382,4 +432,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.bit:
         mode = "stage" if args.bit in {"chat", "stage"} else args.bit
         return show.one_shot(mode, " ".join(args.text))
-    return show.repl()
+    if args.classic or args.plain or not (sys.stdin.isatty() and sys.stdout.isatty()):
+        return show.repl()
+    try:
+        from .ui.app import run
+    except ImportError:  # textual missing: the classic stage still works
+        return show.repl()
+    look = args.look or show.settings.get("COMEDIAN_LOOK", "ask").lower()
+    return run(show, Path.cwd(), look if look in {"ask", "allow", "off"} else "ask")

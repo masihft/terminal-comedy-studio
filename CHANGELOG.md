@@ -6,8 +6,24 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Textual is now a runtime dependency. It is the only one.
+
 ### Added
 
+- A full-screen app built on Textual is now the default stage. The mascot is drawn
+  with half blocks, so its pixels are square. It has a speech bubble, a scrolling
+  transcript, an input line with history, a `/` command menu with Tab completion,
+  arrow-key pickers for `/connect` and `/model`, and a status bar. `--classic` keeps
+  the line-by-line stage, and pipes use it automatically.
+- A folder harness. `comedian` started in any folder can look at it through
+  read-only tools: a summary, the file list, one file, the git log and git status.
+  It asks permission first (once, always for this show, or no). It never leaves the
+  folder and refuses files that usually hold secrets. `/look` performs a bit about
+  the folder, offline too. `/tools ask|allow|off` and `--look` control access.
+- Install as a global command: `uv tool install git+https://github.com/masihft/terminal-comedy-studio`
+  (or pipx), then run `comedian` from any folder.
 - `/connect` (alias `/login`) connects a model from the stage, with no file editing.
   OpenRouter offers browser sign-in through its OAuth PKCE flow, plus a paste-the-code
   path for SSH. OpenAI and Anthropic take a pasted API key, read without echo.

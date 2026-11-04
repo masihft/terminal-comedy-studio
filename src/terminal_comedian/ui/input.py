@@ -27,6 +27,8 @@ COMMANDS: tuple[Command, ...] = (
     Command("story", "a short comedic story"),
     Command("roast", "roast something harmless — /roast your git workflow"),
     Command("random", "the comedian picks what to perform"),
+    Command("look", "let the comedian look at this folder and do a bit about it"),
+    Command("tools", "folder access: /tools ask | allow | off"),
     Command("mode", "show or set the default mode", needs_argument=False),
     Command("character", "show or switch the comedian on stage", needs_argument=False),
     Command("connect", "connect a model: browser sign-in or API key — /connect openrouter", ("login",)),

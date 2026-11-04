@@ -6,27 +6,15 @@ Not a chatbot with a hat on. A tiny performer: a blocky orange mascot in a pink 
 white shirt and black tie, standing on a stage made of text cells, telling jokes, taking
 the laugh, and reacting when a bit does not land.
 
-```text
-$ comedian
-
-TERMINAL COMEDY STUDIO
-Claw'd is on stage. Type anything, or /help.
-AI: none configured. The comedian performs offline material. (/connect)
-
-╭────────────────────────────────────────────────────────────────────────╮
-│                            TERMINAL COMEDY                             │
-│                      ~ LIVE FROM YOUR TERMINAL ~                       │
-│                                                                        │
-│                   ████████████████████████████████                     │
-│           ████████████████████████████████████████████████             │
-│                   ████████████████████████████████                     │
-│                   ████          ████          ████                     │
-│                               🎤  Claw'd                               │
-│ کد من کار می‌کنه. نمی‌دونم چرا. این ترسناک‌ترین قسمته.                  │
-│                   ai: offline · local material only                    │
-╰─────────────────────────────────────────────────────────────────────────╯
-> _
+```bash
+cd any-project
+comedian
 ```
+
+A full-screen stage opens: the mascot animates on a lit stage with a speech bubble beside
+it, the show's transcript scrolls underneath, and a status bar shows the model, the folder
+and whether the comedian may look around. Type anything to talk to it, or `/` to open the
+command menu.
 
 <!-- TODO: replace this block with a real recording (assets/demo.gif) once the
      stage is captured from an actual terminal. Do not fake it. -->
@@ -56,20 +44,42 @@ after that.
   because silence is funny.
 - **Persian first** — `fa` is the default language, with bidi guards so RTL lines do not
   break the stage box. English works too.
-- **Zero runtime dependencies** — standard library only.
+- **Full-screen app** — built on [Textual](https://textual.textualize.io): a fixed input line
+  with history, a `/` command menu with Tab completion, arrow-key pickers, and permission
+  prompts. It is the project's only runtime dependency. `--classic` keeps the old
+  line-by-line stage, and pipes and one-shot commands use it automatically.
+- **It looks at your project, if you let it** — start `comedian` in any folder, and it can
+  count your files and TODOs, read a file or your recent commit messages, and roast what it
+  finds. Every look is read-only and asks first: yes once, yes for this show, or no.
 
 ## Installation
+
+Install it once as a global command with [uv](https://docs.astral.sh/uv/) or
+[pipx](https://pipx.pypa.io):
+
+```bash
+uv tool install git+https://github.com/masihft/terminal-comedy-studio
+```
+
+```bash
+pipx install git+https://github.com/masihft/terminal-comedy-studio
+```
+
+Then, from any folder:
+
+```bash
+comedian
+```
+
+The folder you start it in is the one it can look at (with your permission). To update,
+run `uv tool upgrade terminal-comedy-studio` or `pipx upgrade terminal-comedy-studio`.
+
+For development, from a clone:
 
 ```bash
 git clone https://github.com/masihft/terminal-comedy-studio
 cd terminal-comedy-studio
-pip install -e .
-```
-
-Then:
-
-```bash
-comedian
+pip install -e ".[dev]"
 ```
 
 > **macOS + iCloud Drive:** if `comedian` suddenly says `No module named 'terminal_comedian'`,
@@ -170,6 +180,8 @@ Natural language is the main interface — type anything. Commands are the side 
 | `/logout` | forget the saved key and go offline |
 | `/provider [id]` | show or switch the AI provider |
 | `/settings` | provider, model, language, and exactly what gets sent where |
+| `/look` | the comedian looks at this folder (asks first) and does a bit about it |
+| `/tools ask\|allow\|off` | folder access for this show |
 | `/save [file]` | write this set to a markdown file (never overwrites) |
 | `/reset` | forget the session |
 | `/exit`, `/quit` | leave the stage |
@@ -197,6 +209,11 @@ comedian-preview --sheet assets/character_sheet.svg --all
 - The comedian tells you at start-up which provider is in use. Only what you type, the last
   few turns of the session and the persona prompt are sent. Never files, never environment
   variables, never your shell history.
+- Folder access is read-only and asks before every look unless you answer "always" or start
+  with `--look allow`. It never leaves the folder it was started in, never opens `.git`,
+  `node_modules` or virtualenvs, and refuses files that usually hold secrets (`.env`,
+  `*.pem`, `*.key`, `id_rsa`…). What it reads is sent to the model only when a model is
+  connected, and only after you said yes. `--look off` or `/tools off` turns it off.
 - Generated text is data. The comedian never runs a command the model produced, and it never
   asks you to.
 - Roasting targets situations, not people: no identity, no appearance, no slurs, no
@@ -211,8 +228,10 @@ src/terminal_comedian/
 ├── ai/           provider abstraction: one interface, five engines, defensive JSON parsing
 ├── prompts/      the persona and the six modes, as markdown with front-matter
 ├── memory/       session context for one show
-├── ui/           renderer (ANSI/ASCII/SVG), stage layout, terminal capabilities, commands
-├── cli.py        the `comedian` REPL
+├── harness/      read-only folder tools, permission prompts, the look-then-perform loop
+├── ui/           the Textual app (app.py, pixels.py), plus the classic renderer and stage
+├── connect.py    /connect and /model, shared by both front ends
+├── cli.py        argument parsing, the classic REPL, and the commands both front ends use
 └── preview.py    the `comedian-preview` character inspector
 ```
 
@@ -220,8 +239,12 @@ The model returns structured intent — `{"text", "emotion", "animation", "durat
 the presentation layer decides how to perform it. A provider never knows what a joke is; the
 comedy engine never knows what an HTTP request is. The renderer never knows either provider.
 
-See [docs/framework-comparison.md](docs/framework-comparison.md) for why this is a
-line-based CLI with a stdlib renderer instead of a full-screen TUI framework.
+The harness works with every provider, local models included, because it needs no native
+tool-calling API: the model asks to look by answering `{"tool": ..., "args": ...}` instead of
+a performance. File contents go back to it marked as untrusted data.
+
+[docs/framework-comparison.md](docs/framework-comparison.md) explains why v0.1 started as a
+line-based CLI. v0.2 moved to Textual for the input line, menus and modal prompts.
 
 ## Development
 
@@ -233,7 +256,8 @@ pytest
 ./scripts/demo.sh
 ```
 
-133 tests, none of which need an API key or a network. The transport tests start their own
+189 tests, none of which need an API key or a network. The app tests drive the real
+Textual app headless. The transport tests start their own
 throwaway OpenAI-compatible gateway on localhost.
 
 ## Roadmap

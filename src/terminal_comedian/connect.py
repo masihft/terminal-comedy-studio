@@ -48,6 +48,15 @@ class Wizard:
     login: Callable[..., str] = browser_login
     paste_login: Callable[..., str] = pasted_code_login
     shell: dict[str, str] = field(default_factory=lambda: dict(os.environ))
+    # A full-screen UI passes a picker: (title, options, default, allow_custom) -> choice or None.
+    choose: Callable[[str, list[str], str, bool], str | None] | None = None
+
+    def _pick(self, title: str, options: list[str], default: str = "", allow_custom: bool = False) -> str:
+        assert self.choose is not None
+        picked = self.choose(title, options, default, allow_custom)
+        if not picked:
+            raise Cancelled
+        return picked
 
     # ------------------------------------------------------------- helpers --
     def _ask(self, prompt: str) -> str:
@@ -74,6 +83,9 @@ class Wizard:
             return wanted
         if wanted:
             self.say(f"unknown provider '{wanted}'.")
+        if self.choose:
+            labels = [label for _, label in CHOICES]
+            return CHOICES[labels.index(self._pick("connect the comedian to a model", labels))][0]
         self.say("connect the comedian to a model:")
         for number, (_, label) in enumerate(CHOICES, 1):
             self.say(f"  {number}. {label}")
@@ -102,10 +114,17 @@ class Wizard:
         provider = self._provider({"AI_PROVIDER": pid})
         values: dict[str, str] = {}
         if pid == "openrouter":
-            self.say("  1. sign in with the browser (recommended)")
-            self.say("  2. sign in on another device and paste a code (SSH)")
-            self.say("  3. paste an API key")
-            how = self._ask("how? [1]: ") or "1"
+            ways = [
+                "sign in with the browser (recommended)",
+                "sign in on another device and paste a code (SSH)",
+                "paste an API key",
+            ]
+            if self.choose:
+                how = str(ways.index(self._pick("OpenRouter: how do you want to sign in?", ways, ways[0])) + 1)
+            else:
+                for number, way in enumerate(ways, 1):
+                    self.say(f"  {number}. {way}")
+                how = self._ask("how? [1]: ") or "1"
             try:
                 if how == "1":
                     key = self.login(self.open_browser, self.say)
@@ -146,6 +165,8 @@ class Wizard:
         except AIError as error:
             self.say(f"could not list models: {error}")
             models = []
+        if self.choose:
+            return self._pick(f"{provider.label}: pick a model (type to search)", models, default, True)
         shown = models
         while True:
             for number, name in enumerate(shown[:SHOWN_MODELS], 1):
@@ -169,7 +190,11 @@ class Wizard:
             shown = matches
 
     def offer_save(self, values: dict[str, str]) -> bool:
-        answer = self._ask(f"remember this in {user_env_path()}? [Y/n]: ").lower()
+        if self.choose:
+            keep = ["yes, remember it", "no, only for this show"]
+            answer = "y" if self._pick(f"remember this in {user_env_path()}?", keep, keep[0]) == keep[0] else "n"
+        else:
+            answer = self._ask(f"remember this in {user_env_path()}? [Y/n]: ").lower()
         if answer not in {"", "y", "yes"}:
             self.say("kept for this show only.")
             return False

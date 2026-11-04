@@ -94,6 +94,9 @@ def _candidates(text: str) -> list[str]:
     return [c for c in out if c]
 
 
+json_candidates = _candidates  # public name for the harness, which reads tool calls the same way
+
+
 def _as_float(value: Any, fallback: float) -> float:
     try:
         number = float(str(value).strip())

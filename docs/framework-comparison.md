@@ -85,3 +85,25 @@ framework, and it is a cheaper compromise than six dependencies.
 
 Adding a dependency needs to buy something the standard library cannot do.
 None of the six candidates above did.
+
+## Update for v0.2: moving to Textual
+
+The line-based CLI did its job for the prototype, but it could not do what users expect
+from a modern terminal app such as Claude Code. It had no fixed input line, no command
+menu, no arrow-key selection, and no modal permission prompt. Every reply reprinted the
+stage and scrolled the screen.
+
+v0.2 makes Textual the default front end and keeps the line-based stage as `--classic`:
+
+- **Why Textual and not Ink:** the comedy engine, providers, character grid and tests are
+  all Python. Ink would mean rewriting them in Node. Textual gives the same building
+  blocks: layout, focus, an input with history, option lists, modal screens, worker
+  threads for model calls, and a headless test pilot.
+- **Rendering:** the mascot is drawn with upper half blocks (`▀`) carrying a foreground and
+  a background colour, so each pixel is two cells wide and half a cell tall. That keeps the
+  pixels square at 54×9 cells, where the classic renderer needed 54×18.
+- **Cost:** one runtime dependency, installed automatically by `uv tool install` or `pipx`.
+  Pipes, one-shot commands and `--classic` still use only the standard library.
+- **Known limit:** terminals differ in how they lay out right-to-left text. Persian lines are
+  right-aligned in the bubble, but letter joining and word order still depend on the
+  terminal's bidi support.

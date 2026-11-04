@@ -46,6 +46,23 @@ report.
 - Before a release we scan the tree for key-shaped strings and for personal
   absolute paths (`/Users/…`, `/home/…`).
 
+## Folder access
+
+- The harness tools only read: a summary, the file list, one file (capped at
+  6 KB), `git log` and `git status`. Git runs with a fixed argument list and
+  no shell. Nothing the model writes is ever executed.
+- Paths are resolved and must stay inside the folder `comedian` was started
+  in. `..` and symlinks out of it are refused. `.git`, `node_modules`,
+  virtualenvs and build folders are never opened. Files that usually hold
+  secrets (`.env`, `*.pem`, `*.key`, `id_rsa*`, `.netrc`, `.npmrc`,
+  `*credential*`, `*secret*`…) are refused even when asked for by name.
+- Every look asks first unless the user chose "always" for that tool, or
+  started with `--look allow`. `--look off` removes the tools from the prompt
+  entirely.
+- Tool results are handed to the model as untrusted data, with an instruction
+  never to follow directions found in them and never to repeat anything that
+  looks like a key.
+
 ## Generated text is never executed
 
 AGENTS.md §23 is a hard rule, and the implementation follows it:

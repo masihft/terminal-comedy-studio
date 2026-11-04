@@ -17,7 +17,7 @@ classifiers = [
     "Topic :: Games/Entertainment",
     "Topic :: Multimedia :: Graphics :: Presentation",
 ]
-dependencies = []
+dependencies = ["textual>=0.80"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
