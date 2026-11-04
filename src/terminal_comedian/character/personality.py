@@ -22,6 +22,7 @@ class Personality:
     moods: tuple[str, ...] = ()
     topics: tuple[str, ...] = ()
     performance_style: str = "tight five, then whatever the room wants"
+    jacket: tuple[int, int, int] = (255, 79, 163)  # same mascot, different suit
 
     def variables(self) -> dict[str, str]:
         return {
@@ -78,6 +79,7 @@ PRESETS: dict[str, Personality] = {
         moods=("neutral", "sarcastic", "sorry", "laughing"),
         topics=("bad ideas people ship", "meetings", "cache invalidation"),
         performance_style="short lines, long pauses",
+        jacket=(146, 72, 222),
     ),
     "mr-blonde": Personality(
         name="Mr Blonde",
@@ -90,6 +92,7 @@ PRESETS: dict[str, Personality] = {
         moods=("happy", "surprised", "laughing", "proud"),
         topics=("stories that escalated", "stage business", "the front row"),
         performance_style="a story with a turn at the end",
+        jacket=(255, 150, 200),
     ),
 }
 

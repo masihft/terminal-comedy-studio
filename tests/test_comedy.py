@@ -271,3 +271,12 @@ def test_audience_keeps_score_for_the_prompt():
 def test_performance_lines_are_split_for_the_stage():
     show = Performance(text="first\n\nsecond\n")
     assert show.spoken == ["first", "second"]
+
+
+def test_offline_closer_ends_on_the_characters_catchphrase():
+    from terminal_comedian.memory.session import Session
+
+    assert "باشه، ادامه می‌دیم." in engine(character="sarkash").closer(Session()).text
+    assert engine(character="default").closer(Session()).text.count("\n") == 0
+    assert "THEN" not in engine(language="fa", character="mr-blonde").closer(Session()).text
+    assert "THEN" in engine(language="en", character="mr-blonde").closer(Session()).text

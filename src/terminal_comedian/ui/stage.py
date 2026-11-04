@@ -38,10 +38,10 @@ def center(text: str, width: int) -> str:
     return " " * left + text + " " * (pad - left)
 
 
-def character_block(frame_name: str, caps: Capabilities) -> list[str]:
+def character_block(frame_name: str, caps: Capabilities, jacket: tuple[int, int, int] | None = None) -> list[str]:
     frame = FRAMES[frame_name]
     if caps.block:
-        return to_ansi(frame, colour=caps.colour).split("\n")
+        return to_ansi(frame, colour=caps.colour, jacket=jacket).split("\n")
     return [" " * PIXEL_WIDTH + row for row in to_ascii(frame)]
 
 
@@ -63,6 +63,7 @@ def stage_lines(
     caps: Capabilities,
     mode: str = "stage",
     note: str = "",
+    jacket: tuple[int, int, int] | None = None,
 ) -> list[str]:
     """Everything between the top of the stage and the prompt, as text lines."""
     palette = Palette(caps)
@@ -73,7 +74,7 @@ def stage_lines(
     rows: list[str] = [center(palette.paint(TITLE, PINK), inner)]
     rows.append(center(palette.paint(f"~ {LIVE} ~", PURPLE), inner))
     rows.append("")
-    rows.extend(center(block, inner) for block in character_block(frame_name, caps))
+    rows.extend(center(block, inner) for block in character_block(frame_name, caps, jacket))
     rows.append("")
     rows.append(center(palette.paint(f"🎤  {comedian}", PINK), inner))
     rows.append("")

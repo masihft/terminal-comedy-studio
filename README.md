@@ -72,6 +72,10 @@ Then:
 comedian
 ```
 
+> **macOS + iCloud Drive:** if `comedian` suddenly says `No module named 'terminal_comedian'`,
+> iCloud has marked the venv's `.pth` file hidden and newer Pythons skip hidden `.pth` files.
+> Keep the checkout outside iCloud Drive, or run `chflags -R nohidden .venv`.
+
 Requires Python 3.10+. macOS, Linux and Windows (Windows Terminal recommended; the renderer
 falls back to plain text when the terminal cannot do colour or Unicode blocks).
 

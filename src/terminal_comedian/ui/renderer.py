@@ -25,8 +25,11 @@ def _style(r: int, g: int, b: int) -> str:
     return f"\x1b[38;2;{r};{g};{b}m"
 
 
-def to_ansi(frame: Frame, pixel_width: int = PIXEL_WIDTH, colour: bool = True) -> str:
+def to_ansi(
+    frame: Frame, pixel_width: int = PIXEL_WIDTH, colour: bool = True, jacket: tuple[int, int, int] | None = None
+) -> str:
     """One terminal line per grid row, `pixel_width` cells per pixel."""
+    palette = {**PALETTE, "P": jacket} if jacket else PALETTE
     out = []
     for row in frame.pixels:
         parts = []
@@ -34,7 +37,7 @@ def to_ansi(frame: Frame, pixel_width: int = PIXEL_WIDTH, colour: bool = True) -
             if key == TRANSPARENT:
                 parts.append(" " * pixel_width)
                 continue
-            r, g, b = PALETTE[key]
+            r, g, b = palette[key]
             cells = BLOCK * pixel_width
             parts.append(f"{_style(r, g, b)}{cells}\x1b[0m" if colour else cells)
         out.append("".join(parts))

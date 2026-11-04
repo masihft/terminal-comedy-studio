@@ -318,3 +318,17 @@ def test_save_keeps_more_than_the_prompt_window():
     assert "line 0" in room.as_markdown("Comedian")
     room.reset()
     assert room.script == []
+
+
+def test_each_character_wears_its_own_jacket_on_the_same_mascot():
+    from terminal_comedian.character.personality import PRESETS
+    from terminal_comedian.ui.stage import character_block
+
+    jackets = {preset.jacket for preset in PRESETS.values()}
+    assert len(jackets) == len(PRESETS)
+    blocks = {name: character_block("idle_01", COLOURED, preset.jacket) for name, preset in PRESETS.items()}
+    shapes = {tuple(strip_ansi(line) for line in block) for block in blocks.values()}
+    assert len(shapes) == 1  # colour changes, silhouette never does
+    r, g, b = PRESETS["sarkash"].jacket
+    assert f"38;2;{r};{g};{b}m" in "".join(blocks["sarkash"])
+    assert f"38;2;{r};{g};{b}m" not in "".join(blocks["default"])

@@ -10,6 +10,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - `/save [file]` writes the whole set — every line, not just the prompt window —
   to a local markdown file. It refuses to overwrite an existing file.
+- Each comedian wears their own jacket — pink for Claw'd, purple for Sarkash,
+  light pink for Mr Blonde — on the exact same mascot silhouette.
+- Offline closers end on the comedian's catchphrase when it matches the show's
+  language, so the presets differ even without an AI provider.
 - GitHub Actions workflow running the tests on Linux, macOS and Windows,
   Python 3.10 and 3.13.
 

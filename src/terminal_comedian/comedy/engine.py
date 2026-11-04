@@ -208,8 +208,13 @@ class ComedyEngine:
         )
 
     def closer(self, session: Session) -> Performance:
+        text = jokes.pick(jokes.CLOSERS, self.language, session.bits_told)
+        persona = self.character.personality
+        catchphrases = persona.catchphrases if persona.language == self.language else ()
+        if catchphrases:  # the one place a catchphrase belongs: the way off stage, in the show's language
+            text = f"{text}\n{catchphrases[session.bits_told % len(catchphrases)]}"
         return Performance(
-            text=jokes.pick(jokes.CLOSERS, self.language, session.bits_told),
+            text=text,
             emotion=Emotion.PROUD,
             animation="proud",
             duration=2.2,

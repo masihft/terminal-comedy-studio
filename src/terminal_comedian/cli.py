@@ -66,6 +66,7 @@ class Show:
             caps=self.caps,
             mode=mode or self.session.mode,
             note=self.note(),
+            jacket=self.engine.character.personality.jacket,
         )
 
     def announce(self) -> None:
