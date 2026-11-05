@@ -59,7 +59,8 @@ def _git_head(root: Path) -> str:
 
 def detect(prefix: str | None = None) -> Install:
     """How this copy was installed, and at which commit."""
-    prefix = (prefix or sys.prefix).replace("\\", "/").lower()
+    venv = Path(prefix or sys.prefix)
+    prefix = str(venv).replace("\\", "/").lower()
     try:
         raw = metadata.distribution(DIST).read_text("direct_url.json") or "{}"
         direct = json.loads(raw)
@@ -70,9 +71,11 @@ def detect(prefix: str | None = None) -> Install:
     if root and (editable or not direct):  # running from a clone (pip install -e . or PYTHONPATH=src)
         return Install("checkout", _git_head(root), root)
     commit = (direct.get("vcs_info") or {}).get("commit_id", "")
-    if "/uv/tools/" in prefix or "/uv/tool/" in prefix:
+    # Both tools leave a receipt in the venv they manage; the path is only a fallback,
+    # because PIPX_HOME and UV_TOOL_DIR can put the venv anywhere.
+    if (venv / "uv-receipt.toml").is_file() or "/uv/tools/" in prefix:
         return Install("uv", commit)
-    if "/pipx/venvs/" in prefix:
+    if (venv / "pipx_metadata.json").is_file() or "/pipx/venvs/" in prefix:
         return Install("pipx", commit)
     return Install("pip", commit)
 

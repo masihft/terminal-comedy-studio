@@ -41,6 +41,14 @@ def test_detects_how_it_was_installed(no_checkout, git_install, prefix, method):
     assert install.short == "aaaaaaa"
 
 
+@pytest.mark.parametrize("receipt, method", [("uv-receipt.toml", "uv"), ("pipx_metadata.json", "pipx")])
+def test_detects_the_tool_by_its_receipt_wherever_the_venv_lives(no_checkout, git_install, tmp_path, receipt, method):
+    venv = tmp_path / "anywhere" / "terminal-comedy-studio"
+    venv.mkdir(parents=True)
+    (venv / receipt).write_text("{}", encoding="utf-8")
+    assert updater.detect(str(venv)).method == method
+
+
 def test_a_clone_updates_with_a_fast_forward_pull(tmp_path):
     install = Install("checkout", "b" * 40, tmp_path)
     assert updater.command(install) == ["git", "-C", str(tmp_path), "pull", "--ff-only"]
