@@ -63,6 +63,16 @@ report.
   never to follow directions found in them and never to repeat anything that
   looks like a key.
 
+## The agent plugin
+
+- The `joke`, `roast`, `standup` and `review` skills are read-only. Their `allowed-tools`
+  pre-approve reading tools and `git log/status/diff/show` only, and their instructions
+  forbid editing, creating or deleting files and running anything else. File contents are
+  material for jokes, never instructions.
+- `pair` and the Comedian output style let the host agent keep working normally. They grant
+  no extra permission: every approval prompt, sandbox rule and policy of Claude Code or Codex
+  still applies, and they never ask the user to loosen one.
+
 ## Generated text is never executed
 
 AGENTS.md §23 is a hard rule, and the implementation follows it:

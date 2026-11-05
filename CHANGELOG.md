@@ -13,6 +13,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- A plugin for Claude Code and Codex in `plugins/comedian`. The repository root is a
+  marketplace for both (`.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json`).
+  Skills: `joke`, `roast`, `standup` and `review` (code review told as stand-up), all
+  read-only. The opt-in `pair` skill and a Comedian output style change only the agent's
+  voice, while all its normal permissions still apply.
 - Pixel-letter stage: a LIVE light and TERMINAL COMEDY in a pink-to-purple 5x7 pixel
   font, and the comedian's name under the mascot in a 3x5 pixel font. The layout
   adapts to the terminal: smaller letters on narrow screens, and the border carries

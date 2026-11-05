@@ -1,0 +1,20 @@
+{
+  "name": "terminal-comedy-studio",
+  "interface": {
+    "displayName": "Terminal Comedy Studio"
+  },
+  "plugins": [
+    {
+      "name": "comedian",
+      "source": {
+        "source": "local",
+        "path": "./plugins/comedian"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

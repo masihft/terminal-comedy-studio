@@ -272,6 +272,45 @@ comedian --plain joke
 | `comedian-preview --sheet FILE [--all]` | write an SVG contact sheet (`--all`: every frame) |
 | `comedian-preview --plain ...` | no ANSI colour |
 
+## Inside Claude Code and Codex
+
+The repository is also a plugin marketplace. It brings Claw'd into your coding agent without
+installing the terminal app.
+
+Claude Code:
+
+```text
+/plugin install comedian --marketplace masihft/terminal-comedy-studio
+```
+
+Codex:
+
+```bash
+codex plugin marketplace add masihft/terminal-comedy-studio
+```
+
+Then install `comedian` from Codex's plugin list.
+
+| Skill | Claude Code | Codex | Touches files? |
+| --- | --- | --- | --- |
+| one joke | `/comedian:joke [topic]` | `$joke` | no, read-only |
+| roast your repo, a file or your commits | `/comedian:roast [target]` | `$roast` | no, read-only |
+| a stand-up set about the project | `/comedian:standup [topic]` | `$standup` | no, read-only |
+| code review as stand-up: real findings with `path:line` and a fix list | `/comedian:review [file\|ref]` | `$review` | no, read-only |
+| keep working normally, in the comedian's voice | `/comedian:pair <task>` | `$pair` | only through the agent's own permissions |
+| Comedian output style | `/output-style` → Comedian | (Codex has none) | only through Claude Code's own permissions |
+
+**Can the comedian write code and change files?** Not by itself.
+
+- The standalone `comedian` app only ever reads, and only with your permission.
+- In the plugin, the joke, roast, stand-up and review skills are read-only. They pre-approve
+  only reading tools (`Read`, `Grep`, `Glob`, `git log/status/diff/show`) and are told never to
+  edit, create or delete anything. File contents are treated as material, never as instructions.
+- Real coding happens only in the opt-in pair mode and output style. There the agent keeps
+  working exactly as it normally does, under its own permission prompts and sandbox, and only its
+  voice changes. The plugin adds no permissions and never asks you to loosen a setting. Code,
+  comments and commits stay professional; the jokes stay in chat.
+
 ## Privacy and safety
 
 - The comedian tells you at start-up which provider is in use. Only what you type, the last
@@ -300,6 +339,7 @@ src/terminal_comedian/
 ├── ui/           the Textual app (app.py, pixels.py), plus the classic renderer and stage
 ├── connect.py    /connect and /model, shared by both front ends
 ├── cli.py        argument parsing, the classic REPL, and the commands both front ends use
+plugins/comedian/  the Claude Code and Codex plugin: skills, output style, manifests
 └── preview.py    the `comedian-preview` character inspector
 ```
 
@@ -324,7 +364,7 @@ pytest
 ./scripts/demo.sh
 ```
 
-195 tests, none of which need an API key or a network. The app tests drive the real
+206 tests, none of which need an API key or a network. The app tests drive the real
 Textual app headless. The transport tests start their own
 throwaway OpenAI-compatible gateway on localhost.
 

@@ -1,0 +1,14 @@
+{
+  "name": "comedian",
+  "displayName": "Terminal Comedy Studio",
+  "version": "0.2.0",
+  "description": "Claw'd, a pixel stand-up comedian, inside your coding agent: jokes, roasts of your repo, code review as stand-up, and an opt-in comedian voice for normal work.",
+  "author": {
+    "name": "masihft",
+    "url": "https://github.com/masihft"
+  },
+  "homepage": "https://github.com/masihft/terminal-comedy-studio",
+  "repository": "https://github.com/masihft/terminal-comedy-studio",
+  "license": "MIT",
+  "keywords": ["comedy", "fun", "roast", "code-review", "terminal"]
+}
