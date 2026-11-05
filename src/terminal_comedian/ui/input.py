@@ -38,6 +38,7 @@ COMMANDS: tuple[Command, ...] = (
     Command("settings", "provider, language and what gets sent where"),
     Command("save", "write this set to a markdown file — /save my-set.md"),
     Command("reset", "forget this session and start a fresh show"),
+    Command("update", "check GitHub for a newer comedian and install it"),
     Command("exit", "leave the stage", ("quit",)),
 )
 

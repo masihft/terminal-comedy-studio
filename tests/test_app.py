@@ -258,3 +258,34 @@ def test_a_line_typed_during_a_bit_is_queued_not_lost():
     queued, after, log = drive(script)
     assert queued == "/mode" and after is None
     assert "mode: stage" in log
+
+
+def test_the_stage_reflows_live_as_the_terminal_is_resized():
+    async def script(app, pilot):
+        stage = app.query_one("#stage")
+        seen = {}
+        for size in [(120, 40), (80, 24), (60, 30), (44, 20), (140, 54)]:
+            await pilot.resize_terminal(*size)
+            await pilot.pause(0.1)
+            seen[size] = (
+                {name for name in ("compact", "narrow", "tiny") if stage.has_class(name)},
+                app.query_one("#mascot").display and app.query_one("#mascot-column").styles.display != "none",
+                app.query_one("#mascot").scale,
+            )
+        return seen
+
+    seen = drive(script)
+    assert seen[(120, 40)][0] == set() and seen[(120, 40)][2] == 1  # full stage, pixel title
+    assert seen[(80, 24)][0] == {"compact"}  # no marquee or nameplate; the border carries the name
+    assert seen[(60, 30)][0] == {"compact", "narrow"}  # mascot above the bubble
+    assert "tiny" in seen[(44, 20)][0]  # bubble only
+    assert seen[(140, 54)][2] == 2  # big terminals get the double-size mascot
+
+
+def test_update_command_is_in_the_menu():
+    async def script(app, pilot):
+        await type_line(pilot, "/upd")
+        menu = app.query_one("#menu", OptionList)
+        return [menu.get_option_at_index(i).id for i in range(menu.option_count)]
+
+    assert drive(script) == ["update"]

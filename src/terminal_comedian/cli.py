@@ -318,6 +318,11 @@ class Show:
         if name == "save":
             print(self.save_set(argument))
             return True
+        if name == "update":
+            from .updater import cli as update
+
+            update()
+            return True
         if name == "reset":
             self.session.reset()
             print("fresh room. nothing remembered.")
@@ -392,8 +397,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "bit",
         nargs="?",
-        choices=["joke", "standup", "story", "roast", "random", "chat", "stage"],
-        help="perform one bit and exit",
+        choices=["joke", "standup", "story", "roast", "random", "chat", "stage", "update"],
+        help="perform one bit and exit, or `update` to get the newest comedian",
     )
     parser.add_argument("text", nargs="*", help="the topic for that bit")
     return parser
@@ -424,6 +429,10 @@ def make_show(argv: list[str] | None = None) -> Show:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv if argv is not None else sys.argv[1:])
+    if args.bit == "update":
+        from .updater import cli as update
+
+        return update()
     try:
         show = make_show(argv)
     except ProviderNotConfigured as error:

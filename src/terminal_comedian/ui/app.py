@@ -16,6 +16,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from rich.markup import escape
 from rich.padding import Padding
 from rich.table import Table
 from rich.text import Text
@@ -345,6 +346,12 @@ class ComedianApp(App):
               border-title-align: center; padding: 0 1; margin: 0 1; background: #120914; }}
     #marquee {{ width: 100%; height: auto; content-align: center top; margin-top: 1; }}
     #stage.compact #marquee {{ display: none; }}
+    #stage.compact #nameplate {{ display: none; }}
+    #stage.compact #stage-row {{ margin-top: 0; }}
+    #stage.compact #bubble {{ margin-top: 1; max-height: 8; }}
+    #stage.tiny #mascot-column, #stage.tiny #tail, #stage.tiny #floor {{ display: none; }}
+    #stage.tiny #speech {{ width: 100%; max-width: 100%; min-width: 0; }}
+    #stage.tiny #bubble {{ margin-top: 0; max-height: 6; }}
     #stage-row {{ height: auto; align: center top; margin-top: 1; }}
     #mascot-column {{ width: auto; min-width: 30; height: auto; align: center top; }}
     #mascot {{ width: auto; height: auto; }}
@@ -363,7 +370,7 @@ class ComedianApp(App):
     #stage.narrow #tail {{ display: none; }}
     #stage.narrow #speech {{ width: 100%; max-width: 100%; }}
     #stage.narrow #bubble {{ margin-top: 0; }}
-    #log {{ height: 1fr; margin: 0 1; padding: 0 1; scrollbar-size-vertical: 1; scrollbar-size-horizontal: 0;
+    #log {{ height: 1fr; min-height: 3; margin: 0 1; padding: 0 1; scrollbar-size-vertical: 1; scrollbar-size-horizontal: 0;
             background: #0d0710; }}
     #menu {{ display: none; height: auto; max-height: 12; margin: 0 2; border: round {DIM}; background: #170b17; }}
     #prompt-row {{ height: 3; margin: 0 1; }}
@@ -432,7 +439,7 @@ class ComedianApp(App):
                     yield Static("", id="bubble")
                     yield Static("", id="reaction")
             yield Floor(id="floor")
-        yield RichLog(id="log", wrap=True, markup=False, highlight=False)
+        yield RichLog(id="log", wrap=True, markup=False, highlight=False, min_width=20)  # default 78 clips small terminals
         yield OptionList(id="menu")
         with Horizontal(id="prompt-row"):
             yield CommandInput(placeholder="say anything · / for commands · f1 help", id="prompt")
@@ -458,9 +465,13 @@ class ComedianApp(App):
 
     def on_resize(self, event: events.Resize | None = None) -> None:
         width, height = self.size.width, self.size.height
+        self._laid_out_for = self.size
         stage = self.query_one("#stage")
-        stage.set_class(width < 64, "narrow")
+        tiny = height < 24 or width < 46 or (width < 64 and height < 30)
+        stage.set_class(tiny, "tiny")  # no room for the mascot: the bubble alone holds the stage
+        stage.set_class(width < 64 and not tiny, "narrow")
         stage.set_class(height < 34 or width < 70, "compact")
+        stage.border_subtitle = "" if tiny else "live from your terminal"
         marquee = self.query_one(Marquee)
         marquee.font = "big" if width >= 100 else "small"
         marquee.badge = width >= 110
@@ -476,7 +487,8 @@ class ComedianApp(App):
         marquee.refresh()
         if stage.has_class("compact") or not marquee.badge:  # no room for the pixel light: say it in the border
             dot = f"[{PINK}]●[/]" if lit else f"[{DIM}]●[/]"
-            stage.border_title = f"{dot} LIVE · TERMINAL COMEDY"
+            name = f" · {escape(self.show.comedian)}" if stage.has_class("compact") else ""
+            stage.border_title = f"{dot} LIVE · TERMINAL COMEDY{name}"
         else:
             stage.border_title = ""
 
@@ -516,6 +528,8 @@ class ComedianApp(App):
 
     # ---------------------------------------------------------- animation --
     def tick(self) -> None:
+        if self.size != getattr(self, "_laid_out_for", None):  # every resize path, not only App Resize events
+            self.on_resize()
         self.player.advance(TICK)
         self.mascot.show(self.player.frame_name)  # held reference: a query can fail mid-teardown
         self.live_phase += TICK
@@ -869,6 +883,8 @@ class ComedianApp(App):
             self.say(f"folder     : {folder} (look: {self.harness.permissions.mode})")
         elif name == "save":
             self.say(show.save_set(argument))
+        elif name == "update":
+            self.update_job()
         elif name == "reset":
             show.session.reset()
             self.action_clear_log()
@@ -913,6 +929,43 @@ class ComedianApp(App):
                 message = self.show.apply(values) if values else ""
             except Exception as error:  # keep the stage alive whatever the network does
                 message = f"could not connect: {error}"
+            self.call_from_thread(self._wizard_done, message)
+
+        self.run_worker(work, thread=True, group="bit")
+
+    def update_job(self) -> None:
+        """/update: check GitHub, ask, then run the one fixed update command."""
+        from .. import updater
+
+        self.busy = True
+        self.bit_id += 1
+        self.streamed = False
+        self.thinking_for = 0.0
+        self.thinking_label = "checking GitHub for a newer me"
+        self.player.play("look")
+        self.update_hints()
+
+        def work() -> None:
+            try:
+                status = updater.check()
+            except updater.UpdateError as error:
+                self.call_from_thread(self._wizard_done, f"could not check for updates: {error}")
+                return
+            self.call_from_thread(self.say, status.summary())
+            if status.current:
+                self.call_from_thread(self._wizard_done, "")
+                return
+            argv = updater.command(status.install)
+            yes = f"update now (runs: {updater.describe(argv)})"
+            choice = self._wait_for(PickerScreen("A newer comedian is on GitHub.", [yes, "not now"], yes))
+            if choice != yes:
+                self.call_from_thread(self._wizard_done, "not updated.")
+                return
+            self.call_from_thread(self.say, f"running: {updater.describe(argv)}")
+            ok, output = updater.run(argv)
+            if output:
+                self.call_from_thread(self.say, output)
+            message = "updated. leave with ctrl+c and start comedian again to use it." if ok else "the update failed; nothing else changed."
             self.call_from_thread(self._wizard_done, message)
 
         self.run_worker(work, thread=True, group="bit")

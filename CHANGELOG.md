@@ -13,6 +13,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `comedian update` and `/update`: compare the installed commit with the newest on GitHub,
+  then, after asking, run the one fixed command for how it was installed (uv, pipx, pip,
+  or `git pull --ff-only` in a clone).
+- Responsive stage tiers that follow live resizes: full (pixel title and name), compact
+  (80×24: the name moves into the border), narrow (mascot above the bubble), tiny (bubble
+  only), and a double-size mascot on big terminals. The transcript wraps on small screens.
 - A plugin for Claude Code and Codex in `plugins/comedian`. The repository root is a
   marketplace for both (`.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json`).
   Skills: `joke`, `roast`, `standup` and `review` (code review told as stand-up), all

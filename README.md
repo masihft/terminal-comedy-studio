@@ -48,6 +48,9 @@ after that.
   with history, a `/` command menu with Tab completion, arrow-key pickers, and permission
   prompts. It is the project's only runtime dependency. `--classic` keeps the old
   line-by-line stage, and pipes and one-shot commands use it automatically.
+- **Responsive stage** — the layout follows the terminal live: pixel title and name on
+  roomy screens, a double-size mascot on big ones, a compact stage at 80×24, the mascot above
+  the bubble on narrow screens, and the bubble alone on tiny ones.
 - **It looks at your project, if you let it** — start `comedian` in any folder, and it can
   count your files and TODOs, read a file or your recent commit messages, and roast what it
   finds. Every look is read-only and asks first: yes once, yes for this show, or no.
@@ -71,8 +74,12 @@ Then, from any folder:
 comedian
 ```
 
-The folder you start it in is the one it can look at (with your permission). To update,
-run `uv tool upgrade terminal-comedy-studio` or `pipx upgrade terminal-comedy-studio`.
+The folder you start it in is the one it can look at (with your permission).
+
+To update, run `comedian update`, or type `/update` on stage. It compares your installed commit
+with the newest one on GitHub, shows what changed, and asks before running the one command that
+fits how you installed it: `uv tool upgrade`, `pipx install --force`, `pip install --upgrade`,
+or `git pull --ff-only` in a clone. GitHub is only contacted when you ask.
 
 For development, from a clone:
 
@@ -211,6 +218,7 @@ screen.
 | `/settings` | provider, model, language, folder access, and exactly what is sent where |
 | `/save [file]` | write the whole set to a markdown file (never overwrites; default `set-<date>.md`) |
 | `/reset` | forget this session and clear the transcript |
+| `/update` | check GitHub for a newer comedian; asks before installing it |
 | `/exit`, `/quit` | take a bow and leave |
 
 ### Keys
@@ -248,6 +256,8 @@ comedian [options] [bit] [topic ...]
 | `--plain` | no colour and no Unicode blocks (implies the classic stage) |
 | `--version` | print the version |
 | `-h`, `--help` | print the options |
+
+`comedian update` checks for a newer version and asks before installing it.
 
 One-shot form for scripts and pipes: give a bit (`joke`, `standup`, `story`, `roast`,
 `random`, `chat`, `stage`) and an optional topic. The comedian performs once and exits.
@@ -364,7 +374,7 @@ pytest
 ./scripts/demo.sh
 ```
 
-206 tests, none of which need an API key or a network. The app tests drive the real
+220 tests, none of which need an API key or a network. The app tests drive the real
 Textual app headless. The transport tests start their own
 throwaway OpenAI-compatible gateway on localhost.
 
