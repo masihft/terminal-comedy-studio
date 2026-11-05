@@ -15,6 +15,7 @@ def empty_home(tmp_path_factory, monkeypatch):
     home = tmp_path_factory.mktemp("home")
     for name in ("HOME", "USERPROFILE", "XDG_CONFIG_HOME"):
         monkeypatch.setenv(name, str(home))
+    monkeypatch.chdir(home)  # a project .env in the checkout must not leak in either
     for key in list(os.environ):
         if key in CONFIG_KEYS or key.startswith(PROVIDER_PREFIXES):
             monkeypatch.delenv(key, raising=False)

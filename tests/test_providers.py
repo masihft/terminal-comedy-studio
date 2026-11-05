@@ -219,8 +219,9 @@ def test_real_environment_beats_the_env_file(tmp_path):
     assert settings_.provider == "omniroute"
 
 
-def test_persian_is_the_default_language():
-    assert Settings.load(cwd=None, environ={}).language == "fa"
+def test_english_is_the_default_language_and_persian_is_one_setting_away():
+    assert Settings.load(cwd=None, environ={}).language == "en"
+    assert Settings.load(cwd=None, environ={"LANGUAGE": "fa"}).language == "fa"
 
 
 def test_missing_env_file_is_not_an_error(tmp_path):
