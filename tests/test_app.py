@@ -11,7 +11,7 @@ from textual.widgets import Label, OptionList, RichLog, Static
 
 from terminal_comedian.cli import make_show
 from terminal_comedian.character.frames import FRAMES
-from terminal_comedian.ui.app import ComedianApp, PermissionScreen, PickerScreen
+from terminal_comedian.ui.app import ComedianApp, HelpScreen, PermissionScreen, PickerScreen
 from terminal_comedian.ui.pixels import frame_text, size
 
 
@@ -24,11 +24,11 @@ def isolated(tmp_path, monkeypatch):
     return tmp_path
 
 
-def drive(script, language="en"):
+def drive(script, language="en", typewriter=False):
     """Run the app headless, hand the pilot to `script`, return what it returns."""
 
     async def main():
-        app = ComedianApp(make_show(["--language", language]), workspace=Path.cwd())
+        app = ComedianApp(make_show(["--language", language]), workspace=Path.cwd(), typewriter=typewriter)
         async with app.run_test(size=(110, 38)) as pilot:
             await pilot.pause(0.2)
             return await script(app, pilot)
@@ -63,12 +63,12 @@ def test_half_blocks_keep_the_mascot_square_and_complete():
 
 def test_the_comedian_opens_the_show_before_any_configuration():
     async def script(app, pilot):
-        return log_text(app), str(app.query_one("#status", Static).render())
+        return log_text(app), str(app.query_one("#status", Static).render()) + str(app.query_one("#hints", Static).render())
 
     log, status = drive(script)
-    assert "Claw'd ›" in log
+    assert "Claw'd   Hello" in log or "Claw'd " in log.split("\n")[-1]
     assert "/connect" in log
-    assert "offline" in status and "look: ask" in status
+    assert "offline" in status and "look ask" in status and "f1 help" in status
 
 
 def test_slash_opens_a_filtered_menu_and_tab_completes():
@@ -172,3 +172,76 @@ def test_brackets_from_a_model_are_shown_not_eaten_as_markup():
         return str(app.query_one("#bubble", Static).render())
 
     assert drive(script) == "[stub-funny] a [b]bold[/b] claim"
+
+
+def test_help_opens_as_a_screen_from_the_command_and_f1():
+    async def script(app, pilot):
+        await type_line(pilot, "/help")
+        await pilot.press("enter")
+        await pilot.pause(0.1)
+        first = type(app.screen)
+        await pilot.press("escape")
+        await pilot.press("f1")
+        await pilot.pause(0.1)
+        return first, type(app.screen)
+
+    assert drive(script) == (HelpScreen, HelpScreen)
+
+
+def test_the_typewriter_reveals_the_line_then_logs_it():
+    async def script(app, pilot):
+        await pilot.pause(0.05)
+        early = str(app.query_one("#bubble", Static).render())
+        await pilot.pause(3.5)
+        late = str(app.query_one("#bubble", Static).render())
+        return early, late, log_text(app)
+
+    early, late, log = drive(script, typewriter=True)
+    assert len(early) < len(late)
+    assert late in log
+
+
+def test_escape_cancels_a_slow_bit_and_drops_the_late_answer():
+    import threading
+
+    gate = threading.Event()
+
+    async def script(app, pilot):
+        def slow():
+            gate.wait(5)
+            return app.show.engine.offline("stage", app.show.session)
+
+        app.start(slow, "slow one")
+        await pilot.pause(0.2)
+        busy_before = app.busy
+        await pilot.press("escape")
+        gate.set()
+        await pilot.pause(0.4)
+        return busy_before, app.busy, str(app.query_one("#bubble", Static).render())
+
+    busy_before, busy_after, bubble = drive(script)
+    assert busy_before is True and busy_after is False
+    assert bubble == "…never mind."
+
+
+def test_a_line_typed_during_a_bit_is_queued_not_lost():
+    import threading
+
+    gate = threading.Event()
+
+    async def script(app, pilot):
+        def slow():
+            gate.wait(5)
+            return app.show.engine.offline("stage", app.show.session)
+
+        app.start(slow, "slow one")
+        await type_line(pilot, "/mode")
+        await pilot.press("enter")
+        queued = app.queued
+        gate.set()
+        await pilot.pause(0.6)
+        return queued, app.queued, log_text(app)
+
+    queued, after, log = drive(script)
+    assert queued == "/mode" and after is None
+    assert "mode: stage" in log

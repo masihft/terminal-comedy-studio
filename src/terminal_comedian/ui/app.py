@@ -16,11 +16,13 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from rich.padding import Padding
+from rich.table import Table
 from rich.text import Text
 from textual import events, on
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import Input, Label, OptionList, RichLog, Static
 from textual.widgets.option_list import Option
@@ -232,7 +234,64 @@ class CommandInput(Input):
         self.app.complete_from_menu()  # type: ignore[attr-defined]
 
 
+# ------------------------------------------------------------------- help --
+
+KEYS = (
+    ("enter", "send the line, or run the highlighted command"),
+    ("/", "open the command menu; ↑↓ to choose, tab to complete"),
+    ("↑ ↓", "earlier lines you typed"),
+    ("esc", "close the menu, skip the typing, or cancel a bit in progress"),
+    ("f1", "this help"),
+    ("ctrl+l", "clear the transcript"),
+    ("ctrl+c", "take a bow and leave"),
+)
+
+
+class HelpScreen(ModalScreen[None]):
+    BINDINGS = [Binding("escape,f1,q,enter", "dismiss_help", "close")]
+
+    def compose(self) -> ComposeResult:
+        commands = Table.grid(padding=(0, 2))
+        commands.add_column(style=f"bold {PINK}", no_wrap=True)
+        commands.add_column()
+        for command in COMMANDS:
+            commands.add_row("/" + ", /".join(command.keys), command.help)
+        keys = Table.grid(padding=(0, 2))
+        keys.add_column(style=f"bold {PURPLE}", no_wrap=True)
+        keys.add_column()
+        for key, about in KEYS:
+            keys.add_row(key, about)
+        modes = Table.grid(padding=(0, 2))
+        modes.add_column(style=f"bold {PINK}", no_wrap=True)
+        modes.add_column(style=DIM)
+        for mode, about in mode_help():
+            modes.add_row(mode, about)
+        with VerticalScroll(id="dialog", classes="wide"):
+            yield Label(Text("Terminal Comedy Studio · help"), id="question")
+            yield Static(Text("Just type to talk. Commands are the side door.", style=DIM))
+            yield Static(Text("commands", style=f"bold {DIM}"), classes="section")
+            yield Static(commands)
+            yield Static(Text("keys", style=f"bold {DIM}"), classes="section")
+            yield Static(keys)
+            yield Static(Text("modes (/mode <name>)", style=f"bold {DIM}"), classes="section")
+            yield Static(modes)
+            yield Label("esc to close", classes="hint")
+
+    def action_dismiss_help(self) -> None:
+        self.dismiss(None)
+
+
 # -------------------------------------------------------------------- app --
+
+
+class Floor(Static):
+    """The stage floor: a lit plank under the comedian's feet."""
+
+    def render(self) -> Text:
+        width = max(0, self.size.width)
+        middle = min(width, 60)
+        side = (width - middle) // 2
+        return Text.assemble(("▔" * side, "#2a1427"), ("▔" * middle, "#5c2a4f"), ("▔" * (width - side - middle), "#2a1427"))
 
 
 class ComedianApp(App):
@@ -242,25 +301,38 @@ class ComedianApp(App):
     CSS = f"""
     Screen {{ background: #0d0710; color: #f0e8f0; }}
     #stage {{ height: auto; border: round {PINK}; border-title-color: {PINK}; border-subtitle-color: {DIM};
-              padding: 0 1; margin: 0 1; }}
-    #stage-row {{ height: auto; align: center middle; }}
-    #mascot-column {{ width: 56; height: auto; align: center top; }}
-    #mascot {{ width: 54; height: 9; }}
+              border-title-align: center; padding: 0 1; margin: 0 1; background: #120914; }}
+    #stage-row {{ height: auto; align: center top; }}
+    #mascot-column {{ width: 56; height: auto; }}
+    #mascot {{ width: 54; height: 9; margin-top: 1; }}
     #nameplate {{ width: 54; text-align: center; color: {PINK}; text-style: bold; }}
-    #bubble {{ width: 1fr; min-width: 24; height: auto; max-height: 14; border: round {PURPLE}; padding: 0 1;
-               margin: 1 0 0 2; }}
+    #tail {{ width: 2; height: 3; color: {PURPLE}; margin-top: 3; }}
+    #speech {{ width: 1fr; max-width: 64; min-width: 26; height: auto; }}
+    #bubble {{ width: 100%; height: auto; min-height: 3; max-height: 14; border: round {PURPLE};
+               padding: 0 1; margin-top: 2; }}
     #bubble.rtl {{ text-align: right; }}
-    #bubble.thinking {{ color: {DIM}; text-style: italic; }}
-    #stage.narrow #stage-row {{ layout: vertical; }}
-    #stage.narrow #bubble {{ margin: 0; width: 100%; }}
-    #log {{ height: 1fr; margin: 0 1; padding: 0 1; scrollbar-size-vertical: 1; scrollbar-size-horizontal: 0; background: #0d0710; }}
+    #bubble.thinking {{ color: {DIM}; border: round {DIM}; }}
+    #reaction {{ width: 100%; height: 1; color: {DIM}; text-style: italic; padding: 0 1; }}
+    #floor {{ height: 1; }}
+    #stage.narrow #stage-row {{ layout: vertical; align: center top; }}
+    #stage.narrow #mascot-column {{ width: 100%; align: center top; }}
+    #stage.narrow #tail {{ display: none; }}
+    #stage.narrow #speech {{ width: 100%; max-width: 100%; }}
+    #stage.narrow #bubble {{ margin-top: 0; }}
+    #log {{ height: 1fr; margin: 0 1; padding: 0 1; scrollbar-size-vertical: 1; scrollbar-size-horizontal: 0;
+            background: #0d0710; }}
     #menu {{ display: none; height: auto; max-height: 12; margin: 0 2; border: round {DIM}; background: #170b17; }}
     #prompt-row {{ height: 3; margin: 0 1; }}
     #prompt {{ border: round {PINK}; background: #0d0710; }}
-    #prompt:focus {{ border: round {PINK}; }}
-    #status {{ height: 1; padding: 0 2; color: {DIM}; background: #170b17; }}
+    #prompt.busy {{ border: round {DIM}; }}
+    #statusbar {{ height: 1; background: #170b17; padding: 0 2; }}
+    #status {{ width: 1fr; color: {DIM}; }}
+    #hints {{ width: auto; color: {DIM}; }}
     ModalScreen {{ align: center middle; background: #0d0710 70%; }}
-    #dialog {{ width: 76; max-width: 95%; height: auto; border: round {PINK}; background: #170b17; padding: 1 2; }}
+    #dialog {{ width: 76; max-width: 95%; height: auto; max-height: 90%; border: round {PINK}; background: #170b17;
+               padding: 1 2; }}
+    #dialog.wide {{ width: 96; }}
+    .section {{ margin-top: 1; }}
     #question {{ color: {PINK}; text-style: bold; margin-bottom: 1; width: 100%; }}
     .hint {{ color: {DIM}; margin-top: 1; }}
     .hidden {{ display: none; }}
@@ -270,17 +342,30 @@ class ComedianApp(App):
     BINDINGS = [
         Binding("ctrl+c", "leave", "quit", priority=True, show=False),
         Binding("ctrl+d", "leave", "quit", show=False),
-        Binding("escape", "close_menu", show=False),
+        Binding("escape", "dismiss_or_cancel", show=False),
         Binding("ctrl+l", "clear_log", show=False),
+        Binding("f1", "help", show=False),
     ]
 
-    def __init__(self, show, workspace: Path | None, look_mode: str = "ask") -> None:
+    REVEAL_CPS = 55.0  # typewriter speed; long sets speed up so no line takes more than MAX_REVEAL
+    MAX_REVEAL = 3.0
+
+    def __init__(self, show, workspace: Path | None, look_mode: str = "ask", typewriter: bool = True) -> None:
         super().__init__()
         self.show = show  # the cli.Show: settings, engine, session, provider and its string commands
+        self.typewriter = typewriter
         self.player = Player("idle")
         self.hold = 0.0
         self.next_blink = random.uniform(*BLINK_EVERY)
         self.busy = False
+        self.bit_id = 0
+        self.streamed = False
+        self.thinking_for = 0.0
+        self.queued: str | None = None
+        self.reveal: dict[str, Any] | None = None  # the line being typed into the bubble
+        self.reaction_left = 0.0
+        self.live_phase = 0.0
+        self.thinking_label = ""
         self.harness = Harness(
             engine=show.engine,
             workspace=Workspace(workspace) if workspace else None,
@@ -297,50 +382,97 @@ class ComedianApp(App):
                 with Vertical(id="mascot-column"):
                     yield Mascot(personality.jacket, id="mascot")
                     yield Label(Text(f"🎤 {self.show.comedian}"), id="nameplate")
-                yield Static("", id="bubble")
+                yield Static(Text("\n ◀"), id="tail")
+                with Vertical(id="speech"):
+                    yield Static("", id="bubble")
+                    yield Static("", id="reaction")
+            yield Floor(id="floor")
         yield RichLog(id="log", wrap=True, markup=False, highlight=False)
         yield OptionList(id="menu")
         with Horizontal(id="prompt-row"):
-            yield CommandInput(placeholder="say anything · / for commands", id="prompt")
-        yield Static("", id="status")
+            yield CommandInput(placeholder="say anything · / for commands · f1 help", id="prompt")
+        with Horizontal(id="statusbar"):
+            yield Static("", id="status")
+            yield Static("", id="hints")
 
     def on_mount(self) -> None:
         self.mascot = self.query_one(Mascot)
         stage = self.query_one("#stage")
-        stage.border_title = "TERMINAL COMEDY"
         stage.border_subtitle = "live from your terminal"
+        self.paint_title(True)
         self.set_interval(TICK, self.tick)
         self.update_status()
         self.on_resize()
         self.query_one("#prompt").focus()
-        intro = "you are the audience. type anything, or / for commands."
+        self.info("you are the audience. just type, or press / for commands.")
+        tips = "try: tell me a joke · roast my code · /look · /standup"
         if not self.show.provider:
-            intro += " no AI connected: offline material. /connect to plug one in."
-        self.log_line("·", intro, DIM)
-        self.perform_now(self.show.engine.opener(self.show.session), record=False)
+            tips += " · /connect to plug in an AI"
+        self.info(tips)
+        self.perform_now(self.show.engine.opener(self.show.session))
 
     def on_resize(self, event: events.Resize | None = None) -> None:
         self.query_one("#stage").set_class(self.size.width < 100, "narrow")
+        self.update_hints()
+
+    def paint_title(self, lit: bool) -> None:
+        dot = f"[{PINK}]●[/]" if lit else f"[{DIM}]●[/]"
+        self.query_one("#stage").border_title = f"{dot} LIVE · TERMINAL COMEDY"
 
     # ------------------------------------------------------------ status --
     def update_status(self) -> None:
         provider = self.show.provider
         ai = f"{provider.id} · {provider.model or 'default'}" if provider else "offline"
         folder = self.harness.workspace.name if self.harness.workspace else "-"
-        look = self.harness.permissions.mode
         self.query_one("#status", Static).update(
             Text.assemble(
                 ("● ", PINK if provider else DIM),
-                (ai, "bold"),
-                f"  │  📁 {folder}  │  look: {look}  │  mode: {self.show.session.mode}  │  / commands · ctrl+c quit",
+                (ai, "bold #f0e8f0"),
+                ("  ▸ ", DIM),
+                (folder, "#f0e8f0"),
+                ("  ▸ look ", DIM),
+                (self.harness.permissions.mode, "#f0e8f0"),
+                ("  ▸ mode ", DIM),
+                (self.show.session.mode, "#f0e8f0"),
+                no_wrap=True,
+                overflow="ellipsis",
             )
         )
+        self.update_hints()
+
+    def update_hints(self) -> None:
+        menu = self.query_one("#menu", OptionList)
+        if menu.display:
+            hints = "↑↓ choose · tab complete · enter run · esc close"
+        elif self.busy:
+            hints = "esc cancel"
+        elif self.reveal:
+            hints = "esc skip"
+        else:
+            hints = "/ commands · f1 help · ctrl+c quit" if self.size.width >= 100 else "f1 help"
+        self.query_one("#hints", Static).update(Text(hints, style=DIM))
+        self.query_one("#prompt").set_class(self.busy, "busy")
 
     # ---------------------------------------------------------- animation --
     def tick(self) -> None:
         self.player.advance(TICK)
         self.mascot.show(self.player.frame_name)  # held reference: a query can fail mid-teardown
+        self.live_phase += TICK
+        if self.live_phase >= 0.9:
+            self.live_phase = 0.0
+            self.paint_title(not getattr(self, "_lit", True))
+            self._lit = not getattr(self, "_lit", True)
+        if self.reaction_left > 0:
+            self.reaction_left -= TICK
+            if self.reaction_left <= 0:
+                self.query_one("#reaction", Static).update("")
+        if self.reveal:
+            self.advance_reveal()
+            return
         if self.busy:
+            if not self.streamed:
+                self.thinking_for += TICK
+                self.paint_thinking()
             return
         if self.hold > 0:
             self.hold -= TICK
@@ -353,16 +485,47 @@ class ComedianApp(App):
             self.next_blink = random.uniform(*BLINK_EVERY)
             self.hold = 0.4
 
+    SPINNER = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+
+    def paint_thinking(self) -> None:
+        frame = self.SPINNER[int(self.thinking_for / TICK) % len(self.SPINNER)]
+        seconds = f" {int(self.thinking_for)}s" if self.thinking_for >= 3 else ""
+        self.set_bubble(f"{frame} {self.thinking_label}{seconds}", thinking=True)
+
     # --------------------------------------------------------- transcript --
+    def _row(self, badge: Text, body: Text) -> None:
+        grid = Table.grid(padding=(0, 1), expand=True)
+        grid.add_column(no_wrap=True, width=max(9, len(self.show.comedian) + 2))
+        grid.add_column(ratio=1)
+        grid.add_row(badge, Padding(body, (0, 2, 0, 0)))  # breathing room: some terminals draw RTL a cell wider
+        self.query_one("#log", RichLog).write(grid)
+
+    def _body(self, text: str, style: str = "") -> Text:
+        clean = sanitize(text)
+        return Text(clean, style=style, justify="right" if is_rtl(clean) else "left")
+
+    def log_comedian(self, text: str) -> None:
+        self._row(Text(f" {self.show.comedian} ", style=f"bold #0d0710 on {PINK}"), self._body(text))
+
+    def log_user(self, text: str) -> None:
+        self.query_one("#log", RichLog).write(Text(""))
+        self._row(Text(" you ", style=f"bold #0d0710 on {PURPLE}"), self._body(text, "#e6dcff"))
+
+    def info(self, text: str, icon: str = "·") -> None:
+        self._row(Text(f" {icon}", style=DIM), self._body(text, DIM))
+
     def log_line(self, who: str, text: str, colour: str = "#f0e8f0") -> None:
-        line = Text()
-        line.append(f"{who} ", style=f"bold {colour}")
-        line.append(sanitize(text))
-        self.query_one("#log", RichLog).write(line)
+        """Kept for callers outside the app: one dim line with a label."""
+        self.info(f"{who} {text}".strip())
 
     def note_tool(self, kind: str, text: str) -> None:
-        icon = {"look": "👀", "denied": "🙈", "tool-error": "⚠"}.get(kind, "·")
-        self.log_line(icon, f"{self.show.comedian} {'looked: ' if kind == 'look' else ''}{text}", DIM)
+        if kind == "look":
+            self.info(f"{self.show.comedian} looked: {text}", "◉")
+            self.player.play("look")
+        elif kind == "denied":
+            self.info(f"not allowed: {text}", "✕")
+        else:
+            self.info(text, "!")
 
     def set_bubble(self, text: str, thinking: bool = False) -> None:
         bubble = self.query_one("#bubble", Static)
@@ -371,52 +534,94 @@ class ComedianApp(App):
         bubble.set_class(thinking, "thinking")
         bubble.update(Text(clean))  # plain Text: "[brackets]" from a model must not be read as markup
 
+    def show_reaction(self, text: str) -> None:
+        self.query_one("#reaction", Static).update(Text(sanitize(text)))
+        self.reaction_left = 3.0
+
     # ----------------------------------------------------------- perform --
-    def perform_now(self, performance: Performance, record: bool = True) -> None:
-        self.set_bubble(performance.text)
+    def perform_now(self, performance: Performance) -> None:
+        """Type the line into the bubble while talking, then land it with the bit's animation."""
+        text = sanitize(performance.text)
+        already_shown = self.streamed and str(self.query_one("#bubble", Static).render()) == text
+        self.reveal = {"text": text, "shown": 0.0, "performance": performance}
+        speed = max(self.REVEAL_CPS, len(text) / self.MAX_REVEAL)
+        self.reveal["speed"] = speed
+        if not self.typewriter or already_shown:
+            self.reveal["shown"] = len(text)
+        else:
+            self.player.play("talk")
+            self.set_bubble("")
+        self.update_hints()
+        self.advance_reveal(0.0)
+
+    def advance_reveal(self, dt: float = TICK) -> None:
+        reveal = self.reveal
+        if not reveal:
+            return
+        reveal["shown"] = min(len(reveal["text"]), reveal["shown"] + reveal["speed"] * dt)
+        self.set_bubble(reveal["text"][: int(reveal["shown"])])
+        if reveal["shown"] >= len(reveal["text"]):
+            self.reveal = None
+            self.land(reveal["performance"])
+
+    def land(self, performance: Performance) -> None:
         animation = performance.animation if performance.animation in ANIMATIONS else "talk"
         self.player.play(animation)
-        self.hold = max(1.0, min(performance.duration, 6.0))
-        self.log_line(f"{self.show.comedian} ›", performance.text, PINK)
+        self.hold = max(1.2, min(performance.duration, 6.0))
+        self.log_comedian(performance.text)
         reaction = self.show.session.audience.react(
             performance.text, emotion=performance.emotion, mode=self.show.session.mode
         )
         if reaction.text:
-            self.log_line("  ", reaction.text, DIM)
+            self.show_reaction(reaction.text)
         if performance.error:
-            self.log_line("⚠", f"the provider did not answer: {performance.error}", DIM)
+            self.info(f"the AI did not answer, so this was offline material: {performance.error}", "!")
+        self.update_hints()
+        if self.queued and not self.busy:
+            line, self.queued = self.queued, None
+            self.handle_line(line)
 
-    def start(self, job: Callable[[], Performance], user_text: str, thinking: str = "…") -> None:
-        if self.busy:
-            self.notify("one bit at a time. the comedian is mid-sentence.", severity="warning")
-            return
+    def start(self, job: Callable[[], Performance], user_text: str, label: str = "") -> None:
         self.busy = True
+        self.bit_id += 1
+        self.streamed = False
+        self.thinking_for = 0.0
+        self.thinking_label = label or f"{self.show.comedian} is thinking"
         self.player.play("think")
-        self.set_bubble(thinking, thinking=True)
-        self.run_worker(functools.partial(self._run, job, user_text), thread=True, exclusive=True, group="bit")
+        self.paint_thinking()
+        self.update_hints()
+        self.run_worker(functools.partial(self._run, job, user_text, self.bit_id), thread=True, group="bit")
 
-    def _run(self, job: Callable[[], Performance], user_text: str) -> None:
+    def _run(self, job: Callable[[], Performance], user_text: str, bit_id: int) -> None:
         try:
             performance = job()
         except Exception as error:  # a crash in a bit must never take the stage down
             performance = self.show.engine.offline(self.show.session.mode, self.show.session)
             performance.error = f"{error.__class__.__name__}: {error}"
-        self.call_from_thread(self._finish, performance, user_text)
+        try:
+            self.call_from_thread(self._finish, performance, user_text, bit_id)
+        except RuntimeError:  # the app closed while the model was still talking
+            pass
 
-    def _finish(self, performance: Performance, user_text: str) -> None:
+    def _finish(self, performance: Performance, user_text: str, bit_id: int) -> None:
+        if bit_id != self.bit_id:
+            return  # cancelled with esc: the late answer is dropped
         self.busy = False
         self.show.session.note_exchange(user_text, performance.text)
         self.perform_now(performance)
 
-    def streaming(self, spoken: str) -> None:
-        if spoken.strip():
-            if self.player.animation.name != "talk":
-                self.player.play("talk")
-            self.set_bubble(spoken)
+    def streaming(self, spoken: str, bit_id: int) -> None:
+        if bit_id != self.bit_id or not spoken.strip():
+            return
+        if not self.streamed:
+            self.streamed = True
+            self.player.play("talk")
+        self.set_bubble(spoken)
 
     def bit(self, text: str, mode: str | None = None) -> None:
         chosen = mode or self.show.engine.route(text, self.show.session)
         session = self.show.session
+        bit_id = self.bit_id + 1
 
         def job() -> Performance:
             return self.harness.run(
@@ -424,7 +629,7 @@ class ComedianApp(App):
                 session=session,
                 mode=chosen,
                 provider=self.show.provider,
-                on_delta=lambda spoken: self.call_from_thread(self.streaming, spoken),
+                on_delta=lambda spoken: self.call_from_thread(self.streaming, spoken, bit_id),
             )
 
         self.start(job, text)
@@ -451,16 +656,21 @@ class ComedianApp(App):
         menu = self.query_one("#menu", OptionList)
         value = event.value
         if not value.startswith("/") or " " in value:
-            menu.display = False
+            if menu.display:
+                menu.display = False
+                self.update_hints()
             return
         needle = value[1:].lower()
         menu.clear_options()
         for command in COMMANDS:
             if any(key.startswith(needle) for key in command.keys):
-                menu.add_option(Option(Text.assemble((f"/{command.name:<11}", f"bold {PINK}"), (command.help, DIM)), id=command.name))
+                menu.add_option(
+                    Option(Text.assemble((f"/{command.name:<11}", f"bold {PINK}"), (command.help, DIM)), id=command.name)
+                )
         menu.display = menu.option_count > 0
         if menu.display:
             menu.highlighted = 0
+        self.update_hints()
 
     def complete_from_menu(self) -> bool:
         menu = self.query_one("#menu", OptionList)
@@ -471,6 +681,7 @@ class ComedianApp(App):
         prompt.value = f"/{name} "
         prompt.cursor_position = len(prompt.value)
         menu.display = False
+        self.update_hints()
         return True
 
     @on(OptionList.OptionSelected, "#menu")
@@ -478,11 +689,28 @@ class ComedianApp(App):
         self.complete_from_menu()
         self.query_one("#prompt").focus()
 
-    def action_close_menu(self) -> None:
-        self.query_one("#menu").display = False
+    def action_dismiss_or_cancel(self) -> None:
+        menu = self.query_one("#menu", OptionList)
+        if menu.display:
+            menu.display = False
+        elif self.reveal:
+            self.reveal["shown"] = len(self.reveal["text"])
+            self.advance_reveal(0.0)
+        elif self.busy:
+            self.bit_id += 1  # whatever comes back from the old bit is ignored
+            self.busy = False
+            self.queued = None
+            self.player.play("sorry")
+            self.hold = 1.2
+            self.set_bubble("…never mind.")
+            self.info("cancelled.")
+        self.update_hints()
 
     def action_clear_log(self) -> None:
         self.query_one("#log", RichLog).clear()
+
+    def action_help(self) -> None:
+        self.push_screen(HelpScreen())
 
     @on(Input.Submitted, "#prompt")
     def submitted(self, event: Input.Submitted) -> None:
@@ -495,39 +723,49 @@ class ComedianApp(App):
         menu.display = False
         prompt.value = ""
         if not text:
+            self.update_hints()
             return
         prompt.remember(text)
+        if self.reveal:  # typing again skips the rest of the current line
+            self.reveal["shown"] = len(self.reveal["text"])
+            self.advance_reveal(0.0)
+        if self.busy:
+            self.queued = text
+            self.info("queued: up next after this bit.")
+            return
+        self.handle_line(text)
+
+    def handle_line(self, text: str) -> None:
         command, argument = parse(text)
         if command is None:
             if text.startswith("/"):
-                self.log_line("·", f"unknown command {text.split()[0]}. type / to see them all.", DIM)
+                self.info(f"unknown command {text.split()[0]}. press / to see them all.", "!")
                 return
-            self.log_line("you ›", text, PURPLE)
+            self.log_user(text)
             self.bit(text)
             return
-        self.log_line("you ›", text, PURPLE)
+        self.log_user(text)
         self.run_command(command.name, argument)
+        self.update_hints()
 
     # ----------------------------------------------------------- commands --
     def say(self, text: str) -> None:
         for line in text.splitlines() or [""]:
-            self.log_line("·", line, DIM)
+            self.info(line)
 
     def run_command(self, name: str, argument: str) -> None:
         show = self.show
         if name in {"exit", "quit"}:
             self.action_leave()
         elif name == "help":
-            for command in COMMANDS:
-                self.say(f"/{', /'.join(command.keys):<18} {command.help}")
-            self.say("modes: " + " · ".join(f"/{mode} {about}" for mode, about in mode_help()))
+            self.action_help()
         elif name in {"joke", "standup", "story", "roast", "random"}:
             self.bit(argument, mode=name)
         elif name == "look":
             if show.provider:
                 self.bit(argument or "Look at my project folder and do a bit about it.", mode="roast")
             else:
-                self.start(lambda: self.harness.look(show.session), "/look", "👀")
+                self.start(lambda: self.harness.look(show.session), "/look", f"{show.comedian} is looking around")
         elif name == "tools":
             choice = argument.lower()
             if choice in {"ask", "allow", "off"}:
@@ -541,11 +779,13 @@ class ComedianApp(App):
             self.update_status()
         elif name == "character":
             message = show.set_character(argument.lower())
-            self.query_one(Mascot).jacket = show.engine.character.personality.jacket
+            self.mascot.jacket = show.engine.character.personality.jacket
             self.query_one("#nameplate", Label).update(Text(f"🎤 {show.comedian}"))
             self.harness.engine = show.engine
             self.say(message)
-            self.query_one(Mascot).refresh()
+            self.mascot.refresh()
+            self.player.play("wave")
+            self.hold = 1.5
         elif name == "provider":
             self.say(show.set_provider(argument.lower()) if argument else f"provider: {show.session.provider_label}")
             self.update_status()
@@ -568,14 +808,17 @@ class ComedianApp(App):
             self.say(show.save_set(argument))
         elif name == "reset":
             show.session.reset()
+            self.action_clear_log()
             self.say("fresh room. nothing remembered.")
 
     def wizard_job(self, step: Callable[[Wizard], dict | None]) -> None:
-        if self.busy:
-            self.notify("wait for the punchline first.", severity="warning")
-            return
         self.busy = True
+        self.bit_id += 1
+        self.streamed = False
+        self.thinking_for = 0.0
+        self.thinking_label = "setting up the microphone"
         self.player.play("look")
+        self.update_hints()
 
         def ask(prompt: str) -> str:
             answer = self._wait_for(PromptScreen(prompt))
@@ -609,11 +852,12 @@ class ComedianApp(App):
                 message = f"could not connect: {error}"
             self.call_from_thread(self._wizard_done, message)
 
-        self.run_worker(work, thread=True, exclusive=True, group="bit")
+        self.run_worker(work, thread=True, group="bit")
 
     def _wizard_done(self, message: str) -> None:
         self.busy = False
         self.player.play("idle")
+        self.set_bubble("")
         if message:
             self.say(message)
         self.harness.engine = self.show.engine
@@ -625,8 +869,11 @@ class ComedianApp(App):
             self.exit()
             return
         self._leaving = True
+        self.bit_id += 1
+        self.busy = False
         closer = self.show.engine.closer(self.show.session)
-        self.perform_now(closer, record=False)
+        self.typewriter = False
+        self.perform_now(closer)
         self.player.play("wave")
         self.set_timer(1.6, self.exit)
 

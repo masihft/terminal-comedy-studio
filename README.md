@@ -110,6 +110,7 @@ LANGUAGE=fa
 | `LANGUAGE` | `fa` (default) or `en` |
 | `COMEDIAN_CHARACTER` | `default`, `sarkash`, `mr-blonde` |
 | `COMEDIAN_TIMEOUT` / `COMEDIAN_TEMPERATURE` / `COMEDIAN_MAX_TOKENS` | request tuning |
+| `COMEDIAN_LOOK` | `ask` (default), `allow` or `off`: folder access, same as `--look` |
 | `NO_COLOR` | any value disables ANSI colour |
 
 Never commit `.env`. Keys are read by the **name** of the environment variable and are never
@@ -163,30 +164,93 @@ Switch at any time with `/connect` or `/provider <id>`, or per run with `comedia
 
 ## Commands
 
-Natural language is the main interface — type anything. Commands are the side door:
+Natural language is the main interface: type anything, in Persian or English. Commands
+are the side door. On stage, press `/` to open the command menu, or `F1` for the help
+screen.
+
+### Slash commands
+
+**Performing**
 
 | Command | What it does |
 | --- | --- |
-| `/help` | the commands and the modes |
-| `/joke` | one joke, now |
-| `/standup` | a short set with structure |
-| `/story` | a short comedic story |
+| `/joke [topic]` | one joke, now |
+| `/standup [topic]` | a short set with structure |
+| `/story [topic]` | a short comedic story |
 | `/roast <thing>` | roasts a behaviour or situation, never a person |
 | `/random` | the comedian chooses what to perform |
-| `/mode [name]` | show or set the default mode |
-| `/character [name]` | who is holding the mic |
-| `/connect [id]`, `/login` | connect a model: browser sign-in or API key |
-| `/model [name]` | pick the model |
-| `/logout` | forget the saved key and go offline |
-| `/provider [id]` | show or switch the AI provider |
-| `/settings` | provider, model, language, and exactly what gets sent where |
-| `/look` | the comedian looks at this folder (asks first) and does a bit about it |
-| `/tools ask\|allow\|off` | folder access for this show |
-| `/save [file]` | write this set to a markdown file (never overwrites) |
-| `/reset` | forget the session |
-| `/exit`, `/quit` | leave the stage |
+| `/mode [name]` | show or set the default mode: `stage`, `standup`, `chat`, `roast`, `story`, `random` |
+| `/character [name]` | who holds the mic: `default` (Claw'd), `sarkash`, `mr-blonde` |
 
-One-shot form for scripts and pipes:
+**Your folder**
+
+| Command | What it does |
+| --- | --- |
+| `/look [what to look for]` | the comedian looks at this folder (asks first) and does a bit about it |
+| `/tools ask` | ask before every look (the default) |
+| `/tools allow` | look without asking, for this show |
+| `/tools off` | no looking at all |
+
+**Models**
+
+| Command | What it does |
+| --- | --- |
+| `/connect` | menu: OpenRouter (browser sign-in), OpenAI, Anthropic, OmniRoute, local server, offline |
+| `/connect <id>` | jump straight to one: `openrouter`, `openai`, `anthropic`, `omniroute`, `local`, `offline` |
+| `/login` | same as `/connect` |
+| `/model` | list the provider's models and pick one (type to search) |
+| `/model <name>` | set the model directly, e.g. `/model gpt-4o-mini` |
+| `/logout` | forget the saved key for this provider and go offline |
+| `/provider [id]` | show or switch the provider using what is already configured |
+
+**The show**
+
+| Command | What it does |
+| --- | --- |
+| `/help` | the help screen: commands, keys and modes |
+| `/settings` | provider, model, language, folder access, and exactly what is sent where |
+| `/save [file]` | write the whole set to a markdown file (never overwrites; default `set-<date>.md`) |
+| `/reset` | forget this session and clear the transcript |
+| `/exit`, `/quit` | take a bow and leave |
+
+### Keys
+
+| Key | What it does |
+| --- | --- |
+| `Enter` | send the line, or run the highlighted command from the menu |
+| `/` | open the command menu |
+| `↑` `↓` | move in the menu; otherwise, earlier lines you typed |
+| `Tab` | complete the highlighted command |
+| `Esc` | close the menu, skip the typing animation, or cancel a bit that is taking too long |
+| `F1` | help screen |
+| `Ctrl+L` | clear the transcript |
+| `Ctrl+C` | leave (press twice to skip the bow) |
+
+In permission prompts, `y` means yes once, `a` means yes for this show, and `n` or `Esc` means no.
+Pickers take `↑` `↓`, typing to search, `Enter` to choose and `Esc` to cancel.
+
+### Command-line options
+
+```text
+comedian [options] [bit] [topic ...]
+```
+
+| Option | What it does |
+| --- | --- |
+| `--provider ID` | `offline`, `openrouter`, `openai`, `anthropic`, `omniroute`, `local` |
+| `--model NAME` | model name for that provider |
+| `--character NAME` | `default`, `sarkash`, `mr-blonde` |
+| `--language CODE` | `fa` (default) or `en` |
+| `--mode NAME` | starting mode: `stage`, `standup`, `chat`, `roast`, `story`, `random` |
+| `--look ask\|allow\|off` | may the comedian look at this folder (default `ask`) |
+| `--classic` | the line-by-line stage instead of the full-screen app |
+| `--no-color` | no ANSI colour |
+| `--plain` | no colour and no Unicode blocks (implies the classic stage) |
+| `--version` | print the version |
+| `-h`, `--help` | print the options |
+
+One-shot form for scripts and pipes: give a bit (`joke`, `standup`, `story`, `roast`,
+`random`, `chat`, `stage`) and an optional topic. The comedian performs once and exits.
 
 ```bash
 comedian joke
@@ -195,14 +259,18 @@ comedian --provider local --language en standup
 comedian --plain joke
 ```
 
-For looking at the character alone:
+### Character preview
 
-```bash
-comedian-preview --list
-comedian-preview idle
-comedian-preview walk --strip
-comedian-preview --sheet assets/character_sheet.svg --all
-```
+`comedian-preview` shows the mascot on its own:
+
+| Command | What it does |
+| --- | --- |
+| `comedian-preview --list` | list every animation and frame |
+| `comedian-preview <animation>` | play one animation, e.g. `idle`, `talk`, `laugh`, `wave` |
+| `comedian-preview <animation> --strip` | print its frames side by side |
+| `comedian-preview <animation> --frames N` | stop after N frames |
+| `comedian-preview --sheet FILE [--all]` | write an SVG contact sheet (`--all`: every frame) |
+| `comedian-preview --plain ...` | no ANSI colour |
 
 ## Privacy and safety
 
@@ -256,7 +324,7 @@ pytest
 ./scripts/demo.sh
 ```
 
-189 tests, none of which need an API key or a network. The app tests drive the real
+195 tests, none of which need an API key or a network. The app tests drive the real
 Textual app headless. The transport tests start their own
 throwaway OpenAI-compatible gateway on localhost.
 

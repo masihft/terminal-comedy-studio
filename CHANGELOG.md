@@ -12,6 +12,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Stage UX: the line types into the speech bubble while the comedian talks, then lands
+  with the bit's animation. A spinner with elapsed seconds shows while the model
+  thinks. `Esc` skips the typing or cancels a slow bit, and a line typed mid-bit is
+  queued instead of lost. Audience reactions pop under the bubble. A blinking LIVE
+  light, a stage floor, and a transcript with name badges. The status bar shows
+  context-sensitive key hints, and `F1` or `/help` opens a help screen. The README
+  lists every command, key and option.
 - A full-screen app built on Textual is now the default stage. The mascot is drawn
   with half blocks, so its pixels are square. It has a speech bubble, a scrolling
   transcript, an input line with history, a `/` command menu with Tab completion,
