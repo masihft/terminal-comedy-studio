@@ -20,7 +20,7 @@ class Session:
     """One show: the mode, the transcript, the room and the memory."""
 
     mode: str = "stage"
-    language: str = "fa"
+    language: str = "en"
     turns: deque = field(default_factory=lambda: deque(maxlen=MAX_TURNS))
     audience: Audience = field(default_factory=Audience)
     callbacks: CallbackEngine = field(default_factory=CallbackEngine)

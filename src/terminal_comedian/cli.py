@@ -379,7 +379,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--provider", metavar="ID", help=f"one of: {', '.join(provider_ids())}, offline")
     parser.add_argument("--model", metavar="NAME", help="model name for the chosen provider")
     parser.add_argument("--character", metavar="NAME", help=f"one of: {', '.join(character_names())}")
-    parser.add_argument("--language", metavar="CODE", help="fa (default) or en")
+    parser.add_argument("--language", metavar="CODE", help="en (default) or fa (Persian)")
     parser.add_argument("--mode", metavar="NAME", help=f"default mode: {', '.join(MODES)}")
     parser.add_argument("--no-color", action="store_true", help="plain text, no ANSI")
     parser.add_argument("--plain", action="store_true", help="no colour and no Unicode blocks")

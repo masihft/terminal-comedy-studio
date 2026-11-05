@@ -42,8 +42,8 @@ after that.
 - **Callbacks** — the comedian remembers what you said this session and calls back to it.
 - **An audience** — laughs, applause, awkward silence, the occasional boo. Mostly silence,
   because silence is funny.
-- **Persian first** — `fa` is the default language, with bidi guards so RTL lines do not
-  break the stage box. English works too.
+- **English and Persian** — English is the default. `--language fa` (or `LANGUAGE=fa`)
+  switches to Persian, with bidi guards so right-to-left lines do not break the stage box.
 - **Full-screen app** — built on [Textual](https://textual.textualize.io): a fixed input line
   with history, a `/` command menu with Tab completion, arrow-key pickers, and permission
   prompts. It is the project's only runtime dependency. `--classic` keeps the old
@@ -100,14 +100,14 @@ AI_PROVIDER=omniroute
 OMNIROUTE_BASE_URL=http://localhost:20128/v1
 OMNIROUTE_API_KEY=
 OMNIROUTE_MODEL=
-LANGUAGE=fa
+LANGUAGE=en
 ```
 
 | Variable | Meaning |
 | --- | --- |
 | `AI_PROVIDER` | `offline` (default), `omniroute`, `openrouter`, `openai`, `anthropic`, `local` |
 | `AI_MODEL` | fallback model name when the provider-specific one is empty |
-| `LANGUAGE` | `fa` (default) or `en` |
+| `LANGUAGE` | `en` (default) or `fa` (Persian) |
 | `COMEDIAN_CHARACTER` | `default`, `sarkash`, `mr-blonde` |
 | `COMEDIAN_TIMEOUT` / `COMEDIAN_TEMPERATURE` / `COMEDIAN_MAX_TOKENS` | request tuning |
 | `COMEDIAN_LOOK` | `ask` (default), `allow` or `off`: folder access, same as `--look` |
@@ -240,7 +240,7 @@ comedian [options] [bit] [topic ...]
 | `--provider ID` | `offline`, `openrouter`, `openai`, `anthropic`, `omniroute`, `local` |
 | `--model NAME` | model name for that provider |
 | `--character NAME` | `default`, `sarkash`, `mr-blonde` |
-| `--language CODE` | `fa` (default) or `en` |
+| `--language CODE` | `en` (default) or `fa` (Persian) |
 | `--mode NAME` | starting mode: `stage`, `standup`, `chat`, `roast`, `story`, `random` |
 | `--look ask\|allow\|off` | may the comedian look at this folder (default `ask`) |
 | `--classic` | the line-by-line stage instead of the full-screen app |

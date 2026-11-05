@@ -8,7 +8,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- English is the default language. `--language fa` or `LANGUAGE=fa` switches to Persian.
 - Textual is now a runtime dependency. It is the only one.
+
+### Added
+
+- Pixel-letter stage: a LIVE light and TERMINAL COMEDY in a pink-to-purple 5x7 pixel
+  font, and the comedian's name under the mascot in a 3x5 pixel font. The layout
+  adapts to the terminal: smaller letters on narrow screens, and the border carries
+  the title when there is not enough height.
+
+### Fixed
+
+- The full-screen mascot was stretched to twice its width. It now draws one column
+  and half a row per pixel, so pixels are square, and it scales to double size on
+  large terminals.
 
 ### Added
 

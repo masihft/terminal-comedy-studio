@@ -49,13 +49,26 @@ async def type_line(pilot, text):
 
 
 def test_half_blocks_keep_the_mascot_square_and_complete():
+    # a terminal cell is ~1:2, so one column by half a row is a square pixel
     text = frame_text(FRAMES["idle_01"])
     rows = text.plain.split("\n")
     columns, height = size(FRAMES["idle_01"])
-    assert len(rows) == height == 9
-    assert all(len(row) <= columns for row in rows)
+    assert (columns, height) == (27, 9) and len(rows) == height
+    assert all(len(row) == columns for row in rows)
+    assert size(FRAMES["idle_01"], 2) == (54, 18)
+    assert len(frame_text(FRAMES["idle_01"], scale=2).plain.split("\n")) == 18
     for frame in FRAMES.values():  # every frame keeps the same footprint
         assert size(frame) == (columns, height)
+
+
+def test_pixel_letters_spell_the_title_and_fall_back_for_unknown_glyphs():
+    from terminal_comedian.ui.pixels import pixel_text, supported, text_width
+
+    title = pixel_text("TERMINAL COMEDY", "big")
+    assert len(title.plain.split("\n")) == 4  # 7 pixel rows -> 4 cell rows
+    assert max(len(r) for r in title.plain.split("\n")) == text_width("TERMINAL COMEDY", "big") == 87
+    assert supported("Claw'd") and supported("Mr Blonde")
+    assert not supported("سرکش")
 
 
 # --------------------------------------------------------------------- app
@@ -148,7 +161,7 @@ def test_switching_character_changes_the_nameplate_and_jacket():
         await type_line(pilot, "/character sarkash")
         await pilot.press("enter")
         await pilot.pause(0.1)
-        return str(app.query_one("#nameplate", Label).render()), app.query_one("#mascot").jacket
+        return app.query_one("#nameplate").name_text, app.query_one("#mascot").jacket
 
     name, jacket = drive(script)
     assert "Sarkash" in name

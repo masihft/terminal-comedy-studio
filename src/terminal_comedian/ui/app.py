@@ -34,10 +34,14 @@ from ..connect import Wizard
 from ..harness import Decision, Harness, Permissions, ToolCall, Workspace
 from ..prompts import MODES, mode_help
 from .input import COMMANDS, parse
-from .pixels import frame_text
+from .pixels import frame_text, gradient, pixel_text, side_by_side, supported, text_bitmap
+from .pixels import render as render_bitmap
 from .terminal import is_rtl, sanitize
 
 PINK = "#ff4fa3"
+PINK_RGB = (255, 79, 163)
+PURPLE_RGB = (155, 106, 255)
+DIM_RGB = (92, 60, 86)
 PURPLE = "#9b6aff"
 DIM = "#8b7485"
 TICK = 0.08
@@ -190,6 +194,12 @@ class Mascot(Static):
         super().__init__(**kwargs)
         self.jacket = jacket
         self.frame_name = "idle_01"
+        self.scale = 1
+
+    def set_scale(self, scale: int) -> None:
+        if scale != self.scale:
+            self.scale = scale
+            self.refresh(layout=True)
 
     def show(self, frame_name: str) -> None:
         if frame_name != self.frame_name:
@@ -197,7 +207,38 @@ class Mascot(Static):
             self.refresh()
 
     def render(self) -> Text:
-        return frame_text(FRAMES[self.frame_name], self.jacket)
+        return frame_text(FRAMES[self.frame_name], self.jacket, self.scale)
+
+
+class Marquee(Static):
+    """LIVE light and the show's name, in pixel letters."""
+
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.lit = True
+        self.font = "big"
+        self.badge = True  # the pixel LIVE light; narrow stages put it in the border instead
+
+    def render(self) -> Text:
+        light = PINK_RGB if self.lit else DIM_RGB
+        dot = [[None, light, light, None], [light, light, light, light], [light, light, light, light], [None, light, light, None]]
+        live = text_bitmap("LIVE", "small", (240, 232, 240) if self.lit else DIM_RGB)
+        badge = side_by_side([dot, live], gap=1)
+        title = text_bitmap("TERMINAL COMEDY", self.font, gradient(PINK_RGB, PURPLE_RGB))
+        return render_bitmap(side_by_side([badge, title], gap=4) if self.badge else title)
+
+
+class Nameplate(Static):
+    """The comedian's name in small pixel letters, or plain text if the font lacks a glyph."""
+
+    def __init__(self, name: str, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.name_text = name
+
+    def render(self) -> Text:
+        if supported(self.name_text):
+            return pixel_text(self.name_text, "small", PINK_RGB)
+        return Text(f"🎤 {self.name_text}", style=f"bold {PINK}")
 
 
 class CommandInput(Input):
@@ -302,11 +343,13 @@ class ComedianApp(App):
     Screen {{ background: #0d0710; color: #f0e8f0; }}
     #stage {{ height: auto; border: round {PINK}; border-title-color: {PINK}; border-subtitle-color: {DIM};
               border-title-align: center; padding: 0 1; margin: 0 1; background: #120914; }}
-    #stage-row {{ height: auto; align: center top; }}
-    #mascot-column {{ width: 56; height: auto; }}
-    #mascot {{ width: 54; height: 9; margin-top: 1; }}
-    #nameplate {{ width: 54; text-align: center; color: {PINK}; text-style: bold; }}
-    #tail {{ width: 2; height: 3; color: {PURPLE}; margin-top: 3; }}
+    #marquee {{ width: 100%; height: auto; content-align: center top; margin-top: 1; }}
+    #stage.compact #marquee {{ display: none; }}
+    #stage-row {{ height: auto; align: center top; margin-top: 1; }}
+    #mascot-column {{ width: auto; min-width: 30; height: auto; align: center top; }}
+    #mascot {{ width: auto; height: auto; }}
+    #nameplate {{ width: auto; height: auto; margin-top: 1; }}
+    #tail {{ width: 3; height: 3; color: {PURPLE}; margin-top: 2; }}
     #speech {{ width: 1fr; max-width: 64; min-width: 26; height: auto; }}
     #bubble {{ width: 100%; height: auto; min-height: 3; max-height: 14; border: round {PURPLE};
                padding: 0 1; margin-top: 2; }}
@@ -316,6 +359,7 @@ class ComedianApp(App):
     #floor {{ height: 1; }}
     #stage.narrow #stage-row {{ layout: vertical; align: center top; }}
     #stage.narrow #mascot-column {{ width: 100%; align: center top; }}
+    #stage.narrow #nameplate {{ margin-bottom: 1; }}
     #stage.narrow #tail {{ display: none; }}
     #stage.narrow #speech {{ width: 100%; max-width: 100%; }}
     #stage.narrow #bubble {{ margin-top: 0; }}
@@ -378,11 +422,12 @@ class ComedianApp(App):
     def compose(self) -> ComposeResult:
         personality = self.show.engine.character.personality
         with Vertical(id="stage"):
+            yield Marquee(id="marquee")
             with Horizontal(id="stage-row"):
                 with Vertical(id="mascot-column"):
                     yield Mascot(personality.jacket, id="mascot")
-                    yield Label(Text(f"🎤 {self.show.comedian}"), id="nameplate")
-                yield Static(Text("\n ◀"), id="tail")
+                    yield Nameplate(self.show.comedian, id="nameplate")
+                yield Static(Text("\n ◀━"), id="tail")
                 with Vertical(id="speech"):
                     yield Static("", id="bubble")
                     yield Static("", id="reaction")
@@ -412,12 +457,28 @@ class ComedianApp(App):
         self.perform_now(self.show.engine.opener(self.show.session))
 
     def on_resize(self, event: events.Resize | None = None) -> None:
-        self.query_one("#stage").set_class(self.size.width < 100, "narrow")
+        width, height = self.size.width, self.size.height
+        stage = self.query_one("#stage")
+        stage.set_class(width < 64, "narrow")
+        stage.set_class(height < 34 or width < 70, "compact")
+        marquee = self.query_one(Marquee)
+        marquee.font = "big" if width >= 100 else "small"
+        marquee.badge = width >= 110
+        marquee.refresh(layout=True)
+        self.query_one(Mascot).set_scale(2 if width >= 120 and height >= 50 else 1)
+        self.paint_title(getattr(self, "_lit", True))
         self.update_hints()
 
     def paint_title(self, lit: bool) -> None:
-        dot = f"[{PINK}]●[/]" if lit else f"[{DIM}]●[/]"
-        self.query_one("#stage").border_title = f"{dot} LIVE · TERMINAL COMEDY"
+        stage = self.query_one("#stage")
+        marquee = self.query_one(Marquee)
+        marquee.lit = lit
+        marquee.refresh()
+        if stage.has_class("compact") or not marquee.badge:  # no room for the pixel light: say it in the border
+            dot = f"[{PINK}]●[/]" if lit else f"[{DIM}]●[/]"
+            stage.border_title = f"{dot} LIVE · TERMINAL COMEDY"
+        else:
+            stage.border_title = ""
 
     # ------------------------------------------------------------ status --
     def update_status(self) -> None:
@@ -780,7 +841,9 @@ class ComedianApp(App):
         elif name == "character":
             message = show.set_character(argument.lower())
             self.mascot.jacket = show.engine.character.personality.jacket
-            self.query_one("#nameplate", Label).update(Text(f"🎤 {show.comedian}"))
+            plate = self.query_one(Nameplate)
+            plate.name_text = show.comedian
+            plate.refresh(layout=True)
             self.harness.engine = show.engine
             self.say(message)
             self.mascot.refresh()

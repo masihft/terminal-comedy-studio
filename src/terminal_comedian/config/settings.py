@@ -52,7 +52,7 @@ class Settings:
     environ: dict[str, str] = field(default_factory=dict)
     provider: str = "offline"
     model: str = ""
-    language: str = "fa"
+    language: str = "en"
     character: str = "default"
     timeout: float = 30.0
     temperature: float = 0.9
@@ -70,7 +70,7 @@ class Settings:
             environ=merged,
             provider=(merged.get("AI_PROVIDER") or "offline").strip().lower(),
             model=(merged.get("AI_MODEL") or "").strip(),
-            language=(merged.get("LANGUAGE") or "fa").strip().lower(),
+            language=(merged.get("LANGUAGE") or "en").strip().lower(),
             character=(merged.get("COMEDIAN_CHARACTER") or "default").strip().lower(),
             timeout=number(merged.get("COMEDIAN_TIMEOUT"), 30.0),
             temperature=number(merged.get("COMEDIAN_TEMPERATURE"), 0.9),

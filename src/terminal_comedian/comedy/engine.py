@@ -64,7 +64,7 @@ class ComedyEngine:
 
     @property
     def language(self) -> str:
-        return self.settings.language if self.settings.language in jokes.JOKES else "fa"
+        return self.settings.language if self.settings.language in jokes.JOKES else "en"
 
     def variables(self, session: Session) -> dict[str, str]:
         return {
